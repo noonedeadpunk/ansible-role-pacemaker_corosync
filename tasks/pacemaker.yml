@@ -3,7 +3,10 @@
   with_items:
     - corosync
     - pacemaker
-    - haveged
+
+- name: Install haveged
+  apt: pkg=haveged state=present
+  when: haveged_enabled | default(true)
 
 - name: Generates corosync key
   become: true
