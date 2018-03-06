@@ -18,11 +18,30 @@
   register: __corosync_authkey_created
   notify: Restart corosync
 
-- name: Copy authkey to other nodes
-  synchronize: src=/etc/corosync/authkey dest=/etc/corosync/authkey
+- name: Generate tmpdir for authkey
+  local_action: tempfile
+  register: authkey_tempfile
+  changed_when: False
+  when: inventory_hostname != groups[pacemaker_corosync_group][0]
+
+- name: Fetch authkey for other nodes
+  fetch: src=/etc/corosync/authkey dest="{{ authkey_tempfile.path }}" flat=yes
   delegate_to: "{{ groups[pacemaker_corosync_group][0] }}"
+  changed_when: False
+  when: inventory_hostname != groups[pacemaker_corosync_group][0]
+
+- name: Copy authkey to other nodes
+  copy: src="{{ authkey_tempfile.path }}" dest=/etc/corosync/authkey mode=0400
   when: inventory_hostname != groups[pacemaker_corosync_group][0]
   notify: Restart corosync
+
+- name: Clean up tmpdir
+  local_action:
+    module: file
+    path: "{{ authkey_tempfile.path }}"
+    state: "absent"
+  changed_when: False
+  when: inventory_hostname != groups[pacemaker_corosync_group][0]
 
 - name: Chowns authkeys
   file:
