@@ -1,7 +1,9 @@
 totem {
   version: 2
   cluster_name: {{ pacemaker_corosync_group }}
+{% if pacemaker_enable_nodelist|default(true) %}
   transport: udpu
+{% endif %}
   interface {
     ringnumber: 0
     bindnetaddr: {{ hostvars[inventory_hostname]['ansible_' + pacemaker_corosync_ring_interface].ipv4.address }}
@@ -18,8 +20,12 @@ quorum {
   wait_for_all: 1
   last_man_standing: 1
 {% endif %}
+{% if not pacemaker_enable_nodelist|default(true) %}
+  expected_votes: {{ groups[pacemaker_corosync_group]|count }}
+{% endif %}
 }
 
+{% if pacemaker_enable_nodelist|default(true) %}
 nodelist {
 {% for node in groups[pacemaker_corosync_group]|sort %}
   node {
@@ -29,6 +35,7 @@ nodelist {
   }
 {% endfor %}
 }
+{% endif %}
 
 logging {
   to_logfile: yes
