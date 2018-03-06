@@ -68,6 +68,11 @@
   copy:
     dest: /etc/default/corosync
     content: "START=yes"
+  when: ansible_service_mgr != "systemd"
+
+- name: Enables corosync at boot
+  systemd: name=corosync.service state=started enabled=yes
+  when: ansible_service_mgr == "systemd"
 
 - name: Registers pacemaker service
   service:
