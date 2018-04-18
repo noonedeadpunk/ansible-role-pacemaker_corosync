@@ -22,12 +22,14 @@
   local_action: tempfile
   register: authkey_tempfile
   changed_when: False
+  check_mode: no
   when: inventory_hostname != groups[pacemaker_corosync_group][0]
 
 - name: Fetch authkey for other nodes
   fetch: src=/etc/corosync/authkey dest="{{ authkey_tempfile.path }}" flat=yes
   delegate_to: "{{ groups[pacemaker_corosync_group][0] }}"
   changed_when: False
+  check_mode: no
   when: inventory_hostname != groups[pacemaker_corosync_group][0]
 
 - name: Copy authkey to other nodes
@@ -41,6 +43,7 @@
     path: "{{ authkey_tempfile.path }}"
     state: "absent"
   changed_when: False
+  check_mode: no
   when: inventory_hostname != groups[pacemaker_corosync_group][0]
 
 - name: Chowns authkeys
