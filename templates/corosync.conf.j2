@@ -30,7 +30,7 @@ nodelist {
 {% for node in groups[pacemaker_corosync_group]|sort %}
   node {
     ring0_addr: {{ hostvars[node]['ansible_' + pacemaker_corosync_ring_interface].ipv4.address }}
-    name: {{ node }}
+    name: {{ pacemaker_corosync_fqdn | bool | ternary(hostvars[node].ansible_fqdn, node) }}
     nodeid: {{ loop.index }}
   }
 {% endfor %}

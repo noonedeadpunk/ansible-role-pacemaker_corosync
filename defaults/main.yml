@@ -1,2 +1,3 @@
+pacemaker_corosync_fqdn: false
 pacemaker_corosync_group: false
 pacemaker_corosync_ring_interface: false
