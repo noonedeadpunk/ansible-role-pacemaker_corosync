@@ -6,7 +6,7 @@ totem {
 {% endif %}
   interface {
     ringnumber: 0
-    bindnetaddr: {{ hostvars[inventory_hostname]['ansible_' + pacemaker_corosync_ring_interface].ipv4.address }}
+    bindnetaddr: {{ hostvars[inventory_hostname]['ansible_' + pacemaker_corosync_ring_interface | replace('-', '_')].ipv4.address }}
     broadcast: yes
     mcastport: 5405
   }

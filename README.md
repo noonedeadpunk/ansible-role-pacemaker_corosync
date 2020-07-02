@@ -1,7 +1,7 @@
 ansible-pacemaker-corosync role
 ===============================
 
-Deploys corosync/pacemaker on Ubuntu 14.04
+Deploys corosync/pacemaker
 
 # Variables
 

@@ -2,6 +2,7 @@
   service:
     name: "{{ item }}"
     state: restarted
+    enabled: yes
   with_items:
     - corosync
     - pacemaker
