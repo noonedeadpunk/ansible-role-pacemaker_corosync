@@ -1,3 +1,5 @@
 pacemaker_corosync_fqdn: false
 pacemaker_corosync_group: false
 pacemaker_corosync_ring_interface: false
+pacemaker_corosync_use_syslog: true
+pacemaker_corosync_use_logfile: false

@@ -79,12 +79,19 @@
     owner: root
   notify: Restart corosync
 
+- name: Creates log directory
+  file:
+    path: /var/log/corosync
+    state: directory
+  when: pacemaker_corosync_use_logfile | bool is true
+
 - name: Adds logrotate config for corosync
   template:
     src: corosync_logrotate.conf.j2
     dest: /etc/logrotate.d/corosync
     mode: "0644"
     owner: root
+  when: pacemaker_corosync_use_logfile | bool is true
 
 - name: Creates services directory
   file:
