@@ -83,7 +83,7 @@
   file:
     path: /var/log/corosync
     state: directory
-  when: pacemaker_corosync_use_logfile | bool is true
+  when: pacemaker_corosync_use_logfile | bool
 
 - name: Adds logrotate config for corosync
   template:
@@ -91,7 +91,7 @@
     dest: /etc/logrotate.d/corosync
     mode: "0644"
     owner: root
-  when: pacemaker_corosync_use_logfile | bool is true
+  when: pacemaker_corosync_use_logfile | bool
 
 - name: Creates services directory
   file:
