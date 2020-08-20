@@ -5,13 +5,28 @@
     - ansible_os_family | lower == 'redhat'
     - ansible_distribution_major_version is version('8', '=')
 
-- name: Installs pacemaker & corosync
+- name: Installs corosync
   package:
     name: "{{ item }}"
     state: present
   with_items:
     - corosync
+
+- name: Installs pacemaker
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
     - pacemaker
+  when: "'pacemaker_corosync_group' in group_names"
+
+- name: Installs pacemaker-remote
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - pacemaker-remote
+  when: "'pacemaker_remote_group' in group_names"
 
 - name: Install haveged
   package:
