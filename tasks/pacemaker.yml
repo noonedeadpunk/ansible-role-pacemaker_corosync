@@ -18,7 +18,7 @@
     state: present
   with_items:
     - pacemaker
-  when: "'pacemaker_corosync_group' in group_names"
+  when: "inventory_hostname in groups[pacemaker_corosync_group]"
 
 - name: Installs pacemaker-remote
   package:
@@ -26,7 +26,7 @@
     state: present
   with_items:
     - pacemaker-remote
-  when: "'pacemaker_remote_group' in group_names"
+  when: "inventory_hostname in groups[pacemaker_remote_group]"
 
 - name: Install haveged
   package:
