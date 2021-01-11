@@ -1,5 +1,5 @@
 - name: Enable HighAvailability repository
-  command: yum-config-manager --enable HighAvailability
+  command: yum-config-manager --enable ha
   changed_when: false
   when:
     - ansible_os_family | lower == 'redhat'
