@@ -39,6 +39,6 @@
   - name: Include keepalived vars
     include_vars: "tests/pacemaker_corosync_local.yml"
 
-  - name: "Include ansible-pacemaker-corosync"
+  - name: "Include ansible-role-pacemaker-corosync"
     include_role:
-      name: "ansible-pacemaker-corosync"
+      name: "ansible-role-pacemaker_corosync"
