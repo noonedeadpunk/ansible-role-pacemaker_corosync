@@ -1,0 +1,3 @@
+---
+
+_pacemaker_remote_group_exists: "{{ (pacemaker_remote_group is defined and pacemaker_remote_group in groups) }}"

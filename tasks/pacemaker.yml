@@ -1,6 +1,10 @@
+---
+
 - name: Enable HighAvailability repository
-  command: yum-config-manager --enable ha
+  command: dnf config-manager --enable ha
   changed_when: false
+  args:
+    warn: false
   when:
     - ansible_os_family | lower == 'redhat'
     - ansible_distribution_major_version is version('8', '=')
@@ -26,13 +30,48 @@
     state: present
   with_items:
     - pacemaker-remote
-  when: "inventory_hostname in groups[pacemaker_remote_group]"
+  when:
+    - _pacemaker_remote_group_exists
+    - "inventory_hostname in groups[pacemaker_remote_group]"
+
+- name: Install EPEL repo for CentOS
+  block:
+    - name: Download EPEL gpg keys
+      get_url:
+        url: "{{ pacemaker_corosync_centos_epel_key }}"
+        dest: /etc/pki/rpm-gpg
+      register: _get_yum_keys
+      until: _get_yum_keys is success
+      retries: 5
+      delay: 2
+
+    - name: Install EPEL gpg keys
+      rpm_key:
+        key: "/etc/pki/rpm-gpg/{{ pacemaker_corosync_centos_epel_key.split('/')[-1] }}"
+        state: present
+
+    - name: Install the EPEL repository
+      yum_repository:
+        name: epel-haveged
+        baseurl: "{{ pacemaker_corosync_centos_epel_mirror ~ '/' ~ ansible_distribution_major_version ~ (ansible_distribution_major_version is version('8', '>=')) | ternary('/Everything/', '/') ~ ansible_architecture }}"
+        description: 'Extra Packages for Enterprise Linux {{ ansible_distribution_major_version }} - $basearch'
+        gpgcheck: yes
+        enabled: yes
+        state: present
+        includepkgs: "haveged"
+      register: install_epel_repo
+      until: install_epel_repo is success
+      retries: 5
+      delay: 2
+  when:
+    - pacemaker_corosync_haveged_enabled | bool
+    - ansible_os_family | lower == 'redhat'
 
 - name: Install haveged
   package:
     name: haveged
     state: present
-  when: haveged_enabled | default(True) | bool
+  when: pacemaker_corosync_haveged_enabled | bool
 
 - name: Generates corosync key
   become: true
@@ -41,15 +80,15 @@
   args:
     creates: /etc/corosync/authkey
   when: inventory_hostname == groups[pacemaker_corosync_group][0]
-  register: __corosync_authkey_created
   notify: Restart corosync
 
-- name: Generate tmpdir for authkey
-  local_action:
-    module: tempfile
+- name: Generate tmpfile for authkey
+  tempfile:
+    state: file
   register: authkey_tempfile
   changed_when: False
   check_mode: no
+  delegate_to: localhost
   when: inventory_hostname != groups[pacemaker_corosync_group][0]
 
 - name: Fetch authkey for other nodes
@@ -71,12 +110,12 @@
   notify: Restart corosync
 
 - name: Clean up tmpdir
-  local_action:
-    module: file
+  file:
     path: "{{ authkey_tempfile.path }}"
     state: "absent"
   changed_when: False
   check_mode: no
+  delegate_to: localhost
   when: inventory_hostname != groups[pacemaker_corosync_group][0]
 
 - name: Chowns authkeys
@@ -123,7 +162,7 @@
 
 - name: Adds ferm filtering
   template:
-    src: "../templates/ferm.j2"
+    src: "ferm.j2"
     dest: /etc/ferm/filter-input.d/60_corosync.conf
   when: ferm_enabled | default(false)
   tags: ferm
