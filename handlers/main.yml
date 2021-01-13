@@ -5,4 +5,3 @@
     enabled: yes
   with_items:
     - corosync
-    - pacemaker
