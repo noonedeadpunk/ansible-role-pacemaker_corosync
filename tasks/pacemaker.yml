@@ -26,7 +26,9 @@
     state: present
   with_items:
     - pacemaker-remote
-  when: "inventory_hostname in groups[pacemaker_remote_group]"
+  when:
+    - pacemaker_remote_group is defined and pacemaker_remote_group in groups
+    - "inventory_hostname in groups[pacemaker_remote_group]"
 
 - name: Install haveged
   package:

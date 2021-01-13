@@ -1,8 +1,8 @@
-{%  if inventory_hostname in groups[pacemaker_corosync_group] %}
-{%    set _pacemaker_corosync_bind_addr = hostvars[inventory_hostname]['ansible_eth1' | replace('-', '_')].ipv4.address %}
-{% else %}
-{%    set _pacemaker_corosync_bind_addr = hostvars[inventory_hostname]['ansible_' + pacemaker_corosync_ring_interface | replace('-', '_')].ipv4.address %}
-{%  endif %}
+{% if inventory_hostname in groups[pacemaker_corosync_group] %}
+{%   set _pacemaker_corosync_bind_addr = hostvars[inventory_hostname]['ansible_' + pacemaker_corosync_ring_interface | replace('-', '_')].ipv4.address %}
+{% elif  pacemaker_remote_group in groups and inventory_hostname in groups[pacemaker_remote_group] %}
+{%   set _pacemaker_corosync_bind_addr = hostvars[inventory_hostname]['ansible_' + pacemaker_remote_ring_interface | replace('-', '_')].ipv4.address %}
+{% endif %}
 
 totem {
   version: 2
@@ -34,14 +34,14 @@ quorum {
 {% if pacemaker_enable_nodelist|default(true) %}
 nodelist {
 
-{% for node in groups[pacemaker_remote_group]|sort + groups[pacemaker_corosync_group]|sort %}
+{% for node in (groups[pacemaker_remote_group] | default([]) + groups[pacemaker_corosync_group]) | sort %}
 {%  if node in groups[pacemaker_corosync_group] %}
-{%    set _tmp_pacemaker_corosync_ring_interface = 'eth1' %}
-{% else %}
-{%    set _tmp_pacemaker_corosync_ring_interface = pacemaker_corosync_ring_interface %}
+{%    set _pacemaker_corosync_ring_interface = pacemaker_corosync_ring_interface %}
+{% elif pacemaker_remote_group in groups and inventory_hostname in groups[pacemaker_remote_group] %}
+{%    set _pacemaker_corosync_ring_interface = pacemaker_remote_ring_interface %}
 {%  endif %}
   node {
-    ring0_addr: {{ hostvars[node]['ansible_' + _tmp_pacemaker_corosync_ring_interface | replace('-', '_')].ipv4.address }}
+    ring0_addr: {{ hostvars[node]['ansible_' + _pacemaker_corosync_ring_interface | replace('-', '_')].ipv4.address }}
     name: {{ pacemaker_corosync_fqdn | bool | ternary(hostvars[node].ansible_fqdn, node) }}
     nodeid: {{ loop.index }}
   }
