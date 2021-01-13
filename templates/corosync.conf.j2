@@ -34,7 +34,7 @@ quorum {
 {% if pacemaker_enable_nodelist|default(true) %}
 nodelist {
 
-{% for node in (groups[pacemaker_remote_group] | default([]) + groups[pacemaker_corosync_group]) | sort %}
+{% for node in (_pacemaker_remote_group_exists | ternary(groups[pacemaker_remote_group], []) + groups[pacemaker_corosync_group]) | sort %}
 {%  if node in groups[pacemaker_corosync_group] %}
 {%    set _pacemaker_corosync_ring_interface = pacemaker_corosync_ring_interface %}
 {% elif pacemaker_remote_group in groups and inventory_hostname in groups[pacemaker_remote_group] %}

@@ -1,0 +1,48 @@
+---
+lint: |
+  set -e
+  yamllint .
+  ansible-lint -vv --exclude=.tox -x 204,208,106
+dependency:
+  name: galaxy
+driver:
+  name: docker
+verifier:
+  name: ansible
+provisioner:
+  name: ansible
+  options:
+    v: True
+  log: True
+platforms:
+  - name: pacemaker-centos7
+    image: diodonfrost/ansible-centos:7
+    groups:
+      - corosync
+    privileged: true
+    volumes:
+    - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
+  - name: pacemaker-centos8
+    image: diodonfrost/ansible-centos:8
+    groups:
+      - corosync
+    privileged: true
+    volumes:
+    - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
+  - name: pacemaker-bionic
+    image: travisci/ubuntu-systemd:18.04
+    groups:
+      - corosync
+    privileged: true
+    volumes:
+    - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
+  - name: pacemaker-focal
+    image: travisci/ubuntu-systemd:20.04
+    privileged: true
+    groups:
+      - corosync
+    volumes:
+    - /sys/fs/cgroup:/sys/fs/cgroup:ro
