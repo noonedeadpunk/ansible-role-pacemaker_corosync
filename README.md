@@ -1,7 +1,7 @@
-ansible-pacemaker-corosync role
+ansible-pacemaker-corosync role [![Build Status](https://travis-ci.org/noonedeadpunk/ansible-pacemaker-corosync.svg?branch=master)](https://travis-ci.org/noonedeadpunk/ansible-pacemaker-corosync)
 ===============================
 
-Deploys corosync/pacemaker [![Build Status](https://travis-ci.org/noonedeadpunk/ansible-pacemaker-corosync.svg?branch=master)](https://travis-ci.org/noonedeadpunk/ansible-pacemaker-corosync)
+Deploys corosync/pacemaker 
 
 # Variables
 
