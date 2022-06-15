@@ -1,5 +1,6 @@
 ---
 rules:
+  line-length: disable
   truthy:
     allowed-values:
       - 'True'
@@ -8,3 +9,6 @@ rules:
       - 'False'
       - 'false'
       - 'no'
+
+ignore: |
+  .github/

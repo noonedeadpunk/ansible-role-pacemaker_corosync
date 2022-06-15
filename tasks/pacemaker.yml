@@ -137,6 +137,7 @@
   file:
     path: /var/log/corosync
     state: directory
+    mode: "0775"
   when: pacemaker_corosync_use_logfile | bool
 
 - name: Adds logrotate config for corosync
@@ -151,6 +152,7 @@
   file:
     path: /etc/corosync/service.d/
     state: directory
+    mode: "0755"
 
 - name: Adds pacemaker service
   copy:
@@ -164,6 +166,7 @@
   template:
     src: "ferm.j2"
     dest: /etc/ferm/filter-input.d/60_corosync.conf
+    mode: "0640"
   when: ferm_enabled | default(false)
   tags: ferm
   notify: Restart ferm
