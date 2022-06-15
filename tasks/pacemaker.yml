@@ -1,13 +1,20 @@
 ---
 
+- name: Ensure config-manager is present for dnf
+  package:
+    name: dnf-plugins-core
+    state: present
+  when:
+    - ansible_os_family | lower == 'redhat'
+    - ansible_distribution_major_version is version('8', '>=')
+
 - name: Enable HighAvailability repository
-  command: dnf config-manager --enable ha
+  command: "dnf config-manager --enable {{ _centos_ha_repo_name[ansible_facts['distribution_major_version']] }}"
   changed_when: false
   args:
     warn: false
   when:
     - ansible_os_family | lower == 'redhat'
-    - ansible_distribution_major_version is version('8', '=')
 
 - name: Installs corosync
   package:
