@@ -5,6 +5,7 @@ dependencies: []
 galaxy_info:
   author: Dmitriy Rabotyagov
   company: ACME Corp
+  namespace: noonedeadpunk
   role_name: pacemaker_corosync
   description: Deploys pacemaker and corosync stack.
   license: MIT
