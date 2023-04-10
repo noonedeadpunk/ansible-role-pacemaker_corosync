@@ -16,11 +16,14 @@ jobs:
       fail-fast: false
       matrix:
         scenario:
-          - centos-systemd:stream8
-          - centos-systemd:stream9
-          - debian-systemd:11
-          - ubuntu-systemd:20.04
-          - ubuntu-systemd:22.04
+          - tag: centos-systemd:stream9
+            user: quay.io/gotmax23
+          - tag: debian-systemd:11
+            user: quay.io/gotmax23
+          - tag: ubuntu-systemd:20.04
+            user: quay.io/gotmax23
+          - tag: ubuntu-systemd:22.04
+            user: quay.io/gotmax23
         python-version:
           - 3.8
         ansible-version:
@@ -48,5 +51,6 @@ jobs:
       - name: Test with molecule
         run: |
           cd ${{ github.repository }}
-          export docker_image_tag="${{ matrix.scenario }}"
+          export docker_image_tag="${{ matrix.scenario.tag }}"
+          export docker_user="${{ matrix.scenario.user }}"
           python3 -m molecule test
