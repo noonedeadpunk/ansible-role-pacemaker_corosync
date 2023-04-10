@@ -5,8 +5,8 @@
     name: dnf-plugins-core
     state: present
   when:
-    - ansible_os_family | lower == 'redhat'
-    - ansible_distribution_major_version is version('8', '>=')
+    - ansible_facts['os_family'] | lower == 'redhat'
+    - ansible_facts['distribution_major_version'] is version('8', '>=')
 
 - name: Enable HighAvailability repository
   command: "dnf config-manager --enable {{ _centos_ha_repo_name[ansible_facts['distribution_major_version']] }}"
@@ -14,7 +14,7 @@
   args:
     warn: false
   when:
-    - ansible_os_family | lower == 'redhat'
+    - ansible_facts['os_family'] | lower == 'redhat'
 
 - name: Installs corosync
   package:
@@ -60,8 +60,8 @@
     - name: Install the EPEL repository
       yum_repository:
         name: epel-haveged
-        baseurl: "{{ pacemaker_corosync_centos_epel_mirror ~ '/' ~ ansible_distribution_major_version ~ (ansible_distribution_major_version is version('8', '>=')) | ternary('/Everything/', '/') ~ ansible_architecture }}"
-        description: 'Extra Packages for Enterprise Linux {{ ansible_distribution_major_version }} - $basearch'
+        baseurl: "{{ pacemaker_corosync_centos_epel_mirror ~ '/' ~ ansible_facts['distribution_major_version'] ~ (ansible_facts['distribution_major_version'] is version('8', '>=')) | ternary('/Everything/', '/') ~ ansible_facts['architecture'] }}"
+        description: "Extra Packages for Enterprise Linux {{ ansible_facts['distribution_major_version'] }} - $basearch"
         gpgcheck: yes
         enabled: yes
         state: present
@@ -72,7 +72,7 @@
       delay: 2
   when:
     - pacemaker_corosync_haveged_enabled | bool
-    - ansible_os_family | lower == 'redhat'
+    - ansible_facts['os_family'] | lower == 'redhat'
 
 - name: Install haveged
   package:
