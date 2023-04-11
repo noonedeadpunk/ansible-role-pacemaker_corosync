@@ -1,7 +1,7 @@
 {% if inventory_hostname in groups[pacemaker_corosync_group] %}
-{%   set _pacemaker_corosync_bind_addr = hostvars[inventory_hostname]['ansible_' + pacemaker_corosync_ring_interface | replace('-', '_')].ipv4.address %}
+{%   set _pacemaker_corosync_bind_addr = ansible_facts[pacemaker_corosync_ring_interface | replace('-', '_')]['ipv4']['address'] %}
 {% elif  pacemaker_remote_group in groups and inventory_hostname in groups[pacemaker_remote_group] %}
-{%   set _pacemaker_corosync_bind_addr = hostvars[inventory_hostname]['ansible_' + pacemaker_remote_ring_interface | replace('-', '_')].ipv4.address %}
+{%   set _pacemaker_corosync_bind_addr = ansible_facts[pacemaker_remote_ring_interface | replace('-', '_')]['ipv4']['address'] %}
 {% endif %}
 
 totem {
@@ -41,8 +41,8 @@ nodelist {
 {%    set _pacemaker_corosync_ring_interface = pacemaker_remote_ring_interface %}
 {%  endif %}
   node {
-    ring0_addr: {{ hostvars[node]['ansible_' + _pacemaker_corosync_ring_interface | replace('-', '_')].ipv4.address }}
-    name: {{ pacemaker_corosync_fqdn | bool | ternary(hostvars[node].ansible_fqdn, node) }}
+    ring0_addr: {{ hostvars[node]['ansible_facts'][_pacemaker_corosync_ring_interface | replace('-', '_')]['ipv4']['address'] }}
+    name: {{ pacemaker_corosync_fqdn | bool | ternary(hostvars[node]['ansible_facts']['fqdn'], node) }}
     nodeid: {{ loop.index }}
   }
 {% endfor %}

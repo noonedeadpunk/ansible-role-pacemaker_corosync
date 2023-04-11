@@ -12,14 +12,14 @@
           - inetutils-ping
           - iproute2
         state: present
-      when: ansible_os_family == "Debian"
+      when: ansible_facts['os_family'] == "Debian"
 
     - name: Yum install iproute to fix undefined ansible_default_ipv4.address
       yum:
         name: iproute
         state: present
       when:
-        - ansible_distribution == "CentOS"
+        - ansible_facts['distribution'] == "CentOS"
 
     - name: Add a container to a network, leaving existing containers connected
       delegate_to: localhost
@@ -35,7 +35,7 @@
 
     - name: Show ansible_interfaces
       debug:
-        var: ansible_interfaces
+        var: ansible_facts['interfaces']
 
   roles:
     - role: "{{ playbook_dir | dirname | dirname | basename }}"

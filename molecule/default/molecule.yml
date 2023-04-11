@@ -14,6 +14,9 @@ provisioner:
   options:
     v: True
   log: True
+  config_options:
+    defaults:
+      inject_facts_as_vars: false
 platforms:
   - name: pacemaker
     image: "${docker_user:-quay.io/gotmax23}/${docker_image_tag:-ubuntu-systemd:focal}"
