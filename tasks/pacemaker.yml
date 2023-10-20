@@ -11,8 +11,6 @@
 - name: Enable HighAvailability repository
   command: "dnf config-manager --enable {{ _centos_ha_repo_name[ansible_facts['distribution_major_version']] }}"
   changed_when: false
-  args:
-    warn: false
   when:
     - ansible_facts['os_family'] | lower == 'redhat'
 
