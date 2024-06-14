@@ -1,4 +1,12 @@
 ---
 
-- include: check_vars.yml tags=pacemaker,check
-- include: pacemaker.yml tags=pacemaker
+- name: Importing variables check
+  import_tasks: check_vars.yml
+  tags:
+    - pacemaker
+    - check
+
+- name: Importing pacemaker tasks
+  import_tasks: pacemaker.yml
+  tags:
+    - pacemaker
