@@ -1,5 +1,10 @@
 ---
 
+- name: Ensure all pre-requisites are installed
+  package:
+    name: gnupg2
+    state: present
+
 - name: Ensure config-manager is present for dnf
   package:
     name: dnf-plugins-core
@@ -79,8 +84,6 @@
   when: pacemaker_corosync_haveged_enabled | bool
 
 - name: Generates corosync key
-  become: true
-  become_user: root
   command: corosync-keygen
   args:
     creates: /etc/corosync/authkey
