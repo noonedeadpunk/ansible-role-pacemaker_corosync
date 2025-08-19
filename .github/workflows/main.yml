@@ -16,15 +16,13 @@ jobs:
       fail-fast: false
       matrix:
         scenario:
-          - tag: centos-systemd:stream9
-            user: quay.io/gotmax23
           - tag: centos-systemd:stream10
             user: quay.io/gotmax23
           - tag: debian-systemd:12
             user: quay.io/gotmax23
-          - tag: ubuntu-systemd:20.04
-            user: quay.io/gotmax23
           - tag: ubuntu-systemd:22.04
+            user: quay.io/gotmax23
+          - tag: ubuntu-systemd:24.04
             user: quay.io/gotmax23
         python-version:
           - "3.12"
