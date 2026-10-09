@@ -14,12 +14,19 @@ platforms:
     groups:
       - corosync
     privileged: true
+    networks:
+      - name: bridge
+      - name: pacemaker
+    docker_networks:
+      - name: pacemaker
+        ipam_config:
+          - subnet: 192.168.33.0/24
 
 provisioner:
   name: ansible
   options:
-    v: True
-  log: True
+    v: true
+  log: true
   lint:
     name: ansible-lint
   playbooks:

@@ -1,12 +1,28 @@
 ---
 - name: Prepare molecule instance
-  hosts: all[0]
+  hosts: all
   tasks:
-  - name: Create a network with custom IPAM config
-    delegate_to: localhost
-    community.general.docker_network:
-      name: pacemaker-network
-      ipam_config:
-        - subnet: 192.168.33.0/24
-          gateway: 192.168.33.254
-          iprange: 192.168.33.0/26
+    - name: Apt update and install rsync, ping, iproute
+      ansible.builtin.apt:
+        update_cache: true
+        name:
+          - rsync
+          - inetutils-ping
+          - iproute2
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Yum install iproute to fix undefined ansible_default_ipv4.address
+      ansible.builtin.package:
+        name: iproute
+        state: present
+      when:
+        - ansible_facts['distribution'] == "CentOS"
+
+    - name: Re-collect network facts required after installation iproute
+      ansible.builtin.setup:
+        gather_subset: network
+
+    - name: Show ansible_interfaces
+      ansible.builtin.debug:
+        var: ansible_facts['interfaces']
