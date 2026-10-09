@@ -12,3 +12,12 @@
     enabled: true
   when:
     - inventory_hostname in groups[pacemaker_corosync_group]
+
+- name: Restart pacemaker-remote
+  ansible.builtin.service:
+    name: pacemaker-remote
+    state: restarted
+    enabled: true
+  when:
+    - _pacemaker_remote_group_exists
+    - inventory_hostname in groups[pacemaker_remote_group]

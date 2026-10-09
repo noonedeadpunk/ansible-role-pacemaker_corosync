@@ -21,26 +21,12 @@
 
 - name: Installs corosync
   ansible.builtin.package:
-    name:
-      - corosync
+    name: "{{ _pacemaker_corosync_install_packages }}"
     state: present
-
-- name: Installs pacemaker
-  ansible.builtin.package:
-    name:
-      - pacemaker
-    state: present
-  when:
-    - inventory_hostname in groups[pacemaker_corosync_group]
-
-- name: Installs pacemaker-remote
-  ansible.builtin.package:
-    name:
-      - pacemaker-remote
-    state: present
-  when:
-    - _pacemaker_remote_group_exists
-    - inventory_hostname in groups[pacemaker_remote_group]
+  notify:
+    - Restart corosync
+    - Restart pacemaker
+    - Restart pacemaker-remote
 
 - name: Install EPEL repo for CentOS
   when:
