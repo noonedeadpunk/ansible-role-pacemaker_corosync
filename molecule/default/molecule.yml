@@ -7,20 +7,25 @@ driver:
   name: docker
 
 platforms:
-  - name: pacemaker
-    image: "${docker_user:-quay.io/gotmax23}/${docker_image_tag:-ubuntu-systemd:noble}"
-    command: ""
-    pre_build_image: true
-    groups:
-      - corosync
-    privileged: true
-    networks:
-      - name: bridge
-      - name: pacemaker
-    docker_networks:
-      - name: pacemaker
-        ipam_config:
-          - subnet: 192.168.33.0/24
+  - name: pacemaker01
+    <<: &host_config
+      image: "${docker_user:-quay.io/gotmax23}/${docker_image_tag:-ubuntu-systemd:noble}"
+      command: ""
+      pre_build_image: true
+      groups:
+        - corosync
+      privileged: true
+      networks:
+        - name: bridge
+        - name: pacemaker
+      docker_networks:
+        - name: pacemaker
+          ipam_config:
+            - subnet: 192.168.33.0/24
+  - name: pacemaker02
+    <<: *host_config
+  - name: pacemaker03
+    <<: *host_config
 
 provisioner:
   name: ansible
