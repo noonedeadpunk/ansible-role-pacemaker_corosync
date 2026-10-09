@@ -16,6 +16,8 @@
       - corosync
       - pacemaker
     state: absent
+  notify:
+    - Restart pacemaker-remote
 
 - name: Ensure legacy corosync configuration is removed on remote nodes
   ansible.builtin.file:

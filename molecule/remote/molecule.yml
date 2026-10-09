@@ -3,6 +3,8 @@ dependency:
   name: galaxy
   enabled: false
 
+prerun: false
+
 driver:
   name: docker
 
@@ -10,39 +12,41 @@ platforms:
   - name: pacemaker01
     groups:
       - corosync
+    networks:
+      - name: bridge
+      - name: pacemaker-remote
     <<: &host_config
       image: "${docker_user:-quay.io/gotmax23}/${docker_image_tag:-ubuntu-systemd:noble}"
       command: ""
       pre_build_image: true
       privileged: true
-      networks:
-        - name: bridge
-        - name: pacemaker-remote
       docker_networks:
+        - name: noop
         - name: pacemaker-remote
           ipam_config:
             - subnet: 192.168.34.0/24
   - name: pacemaker02
+    <<: *host_config
     groups:
       - corosync
-    <<: *host_config
+    networks:
+      - name: bridge
+      - name: pacemaker-remote
   - name: pacemaker03
+    <<: *host_config
     groups:
       - corosync
-    <<: *host_config
+    networks:
+      - name: bridge
+      - name: pacemaker-remote
   - name: pacemaker-remote01
+    <<: *host_config
     groups:
       - pacemaker_remote
     networks:
       - name: bridge
       - name: noop
       - name: pacemaker-remote
-    docker_networks:
-      - name: noop
-      - name: pacemaker-remote
-        ipam_config:
-          - subnet: 192.168.34.0/24
-    <<: *host_config
 
 provisioner:
   name: ansible

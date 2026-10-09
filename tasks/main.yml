@@ -4,6 +4,7 @@
   ansible.builtin.import_tasks: check_vars.yml
   tags:
     - pacemaker
+    - pacemaker-remote
     - check
 
 - name: Prepare system for cluster deployment
@@ -11,11 +12,27 @@
     file: pre_install.yml
   tags:
     - pacemaker
+    - pacemaker-remote
 
 - name: Importing pacemaker tasks
   ansible.builtin.import_tasks: install.yml
   tags:
     - pacemaker
+    - pacemaker-remote
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Include remote resource configuration
+  ansible.builtin.include_tasks:
+    file: configure_remote_resource.yml
+    apply:
+      tags:
+        - pacemaker-remote
+  when:
+    - pacemaker_remote_register_resource | bool
+    - inventory_hostname == pacemaker_corosync_bootstrap_node
+  tags:
     - pacemaker-remote
 
 - name: Ensure that pacemaker-remote nodes are not part of cluster

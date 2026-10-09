@@ -17,7 +17,7 @@
     - name: Fetch authkey for other nodes
       ansible.builtin.slurp:
         src: /etc/corosync/authkey
-      delegate_to: "{{ groups[pacemaker_corosync_group][0] }}"
+      delegate_to: "{{ pacemaker_corosync_bootstrap_node }}"
       check_mode: false
       register: _corosync_authkey
 

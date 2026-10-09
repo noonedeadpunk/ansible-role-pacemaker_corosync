@@ -13,6 +13,22 @@
 - name: Include pacemaker/corosync tasks
   ansible.builtin.include_tasks:
     file: pacemaker.yml
+    apply:
+      tags:
+        - pacemaker
   when:
     - pacemaker_corosync_group in groups
     - inventory_hostname in groups[pacemaker_corosync_group]
+  tags:
+    - pacemaker
+
+- name: Include pacemaker-remote tasks
+  ansible.builtin.include_tasks:
+    file: pacemaker_remote.yml
+    apply:
+      tags:
+        - pacemaker-remote
+  when:
+    - _pacemaker_remote_group_exists | bool
+  tags:
+    - pacemaker-remote

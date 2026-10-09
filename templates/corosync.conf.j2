@@ -3,7 +3,7 @@
 totem {
   version: 2
   cluster_name: {{ pacemaker_corosync_group }}
-{% if pacemaker_enable_nodelist|default(true) %}
+{% if pacemaker_enable_nodelist | default(true) %}
   transport: udpu
 {% endif %}
   interface {
@@ -16,18 +16,18 @@ totem {
 
 quorum {
   provider: corosync_votequorum
-{% if groups[pacemaker_corosync_group]|count == 2 %}
+{% if groups[pacemaker_corosync_group] | count == 2 %}
   two_node: 1
 {% else %}
   wait_for_all: 1
   last_man_standing: 1
 {% endif %}
-{% if not pacemaker_enable_nodelist|default(true) %}
-  expected_votes: {{ groups[pacemaker_corosync_group]|count }}
+{% if not pacemaker_enable_nodelist | default(true) %}
+  expected_votes: {{ groups[pacemaker_corosync_group] | count }}
 {% endif %}
 }
 
-{% if pacemaker_enable_nodelist|default(true) %}
+{% if pacemaker_enable_nodelist | default(true) %}
 nodelist {
 
 {% for node in groups[pacemaker_corosync_group] | sort %}
