@@ -16,3 +16,16 @@
   ansible.builtin.import_tasks: pacemaker.yml
   tags:
     - pacemaker
+
+- name: Ensure that pacemaker-remote nodes are not part of cluster
+  ansible.builtin.include_tasks:
+    file: cleanup_remote_node.yml
+    apply:
+      tags:
+        - pacemaker-remote
+  when:
+    - _pacemaker_remote_group_exists | bool
+    - inventory_hostname in groups.get(pacemaker_remote_group, [])
+    - inventory_hostname not in groups.get(pacemaker_corosync_group, [])
+  tags:
+    - pacemaker-remote
