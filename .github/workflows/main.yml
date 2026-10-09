@@ -18,16 +18,17 @@ jobs:
         scenario:
           - tag: centos-systemd:stream10
             user: quay.io/gotmax23
-          - tag: debian-systemd:12
-            user: quay.io/gotmax23
-          - tag: ubuntu-systemd:22.04
+          - tag: debian-systemd:13
             user: quay.io/gotmax23
           - tag: ubuntu-systemd:24.04
+            user: quay.io/gotmax23
+          - tag: ubuntu-systemd:26.04
             user: quay.io/gotmax23
         python-version:
           - "3.12"
         ansible-version:
           - 2.17.13
+          - 2.21.5
 
     steps:
       - name: Checkout
