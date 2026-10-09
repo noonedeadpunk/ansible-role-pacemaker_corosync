@@ -1,7 +1,8 @@
+---
 - name: Restart corosync
-  service:
+  ansible.builtin.service:
     name: "{{ item }}"
     state: restarted
-    enabled: yes
+    enabled: true
   with_items:
     - corosync

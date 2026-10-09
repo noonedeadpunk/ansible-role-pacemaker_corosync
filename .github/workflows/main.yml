@@ -27,7 +27,7 @@ jobs:
         python-version:
           - "3.12"
         ansible-version:
-          - 2.17.13
+          - 2.18.19
           - 2.21.5
 
     steps:
@@ -51,4 +51,5 @@ jobs:
           cd ${{ github.repository }}
           export docker_image_tag="${{ matrix.scenario.tag }}"
           export docker_user="${{ matrix.scenario.user }}"
-          python3 -m molecule test
+          ansible-lint tests/test.yml
+          molecule test
