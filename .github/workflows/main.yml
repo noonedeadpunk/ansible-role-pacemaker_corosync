@@ -42,13 +42,10 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install -r ${{ github.repository }}/test-requirements.txt
+          python3 -m pip install -r ${{ github.repository }}/tests/requirements.txt
       - name: Install ansible
         run: |
           python3 -m pip install ansible-core==${{ matrix.ansible-version }}
-      - name: Install ansible collections
-        run: |
-          ansible-galaxy install -r ${{ github.repository }}/test-requirements.yml
       - name: Test with molecule
         run: |
           cd ${{ github.repository }}

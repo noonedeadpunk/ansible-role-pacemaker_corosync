@@ -38,4 +38,4 @@
         var: ansible_facts['interfaces']
 
   roles:
-    - role: "{{ playbook_dir | dirname | dirname | basename }}"
+    - role: pacemaker_corosync
