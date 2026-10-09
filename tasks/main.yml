@@ -6,6 +6,12 @@
     - pacemaker
     - check
 
+- name: Prepare system for cluster deployment
+  ansible.builtin.import_tasks:
+    file: pre_install.yml
+  tags:
+    - pacemaker
+
 - name: Importing pacemaker tasks
   ansible.builtin.import_tasks: pacemaker.yml
   tags:
