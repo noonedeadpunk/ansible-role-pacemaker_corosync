@@ -32,7 +32,8 @@
     state: present
   with_items:
     - pacemaker
-  when: "inventory_hostname in groups[pacemaker_corosync_group]"
+  when:
+    - inventory_hostname in groups[pacemaker_corosync_group]
 
 - name: Installs pacemaker-remote
   package:
@@ -42,7 +43,7 @@
     - pacemaker-remote
   when:
     - _pacemaker_remote_group_exists
-    - "inventory_hostname in groups[pacemaker_remote_group]"
+    - inventory_hostname in groups[pacemaker_remote_group]
 
 - name: Install EPEL repo for CentOS
   block:
@@ -97,7 +98,8 @@
   changed_when: False
   check_mode: no
   delegate_to: localhost
-  when: inventory_hostname != groups[pacemaker_corosync_group][0]
+  when:
+    - inventory_hostname != groups[pacemaker_corosync_group][0]
 
 - name: Fetch authkey for other nodes
   fetch:
@@ -105,26 +107,29 @@
     dest: "{{ authkey_tempfile.path }}"
     flat: yes
   delegate_to: "{{ groups[pacemaker_corosync_group][0] }}"
-  changed_when: False
-  check_mode: no
-  when: inventory_hostname != groups[pacemaker_corosync_group][0]
+  changed_when: false
+  check_mode: false
+  when:
+    - inventory_hostname != groups[pacemaker_corosync_group][0]
 
 - name: Copy authkey to other nodes
   copy:
     src: "{{ authkey_tempfile.path }}"
     dest: /etc/corosync/authkey
     mode: "0400"
-  when: inventory_hostname != groups[pacemaker_corosync_group][0]
+  when:
+    - inventory_hostname != groups[pacemaker_corosync_group][0]
   notify: Restart corosync
 
 - name: Clean up tmpdir
   file:
     path: "{{ authkey_tempfile.path }}"
     state: "absent"
-  changed_when: False
-  check_mode: no
+  changed_when: false
+  check_mode: false
   delegate_to: localhost
-  when: inventory_hostname != groups[pacemaker_corosync_group][0]
+  when:
+    - inventory_hostname != groups[pacemaker_corosync_group][0]
 
 - name: Chowns authkeys
   file:
@@ -146,7 +151,8 @@
     path: /var/log/corosync
     state: directory
     mode: "0775"
-  when: pacemaker_corosync_use_logfile | bool
+  when:
+    - pacemaker_corosync_use_logfile | bool
 
 - name: Adds logrotate config for corosync
   template:
@@ -154,7 +160,8 @@
     dest: /etc/logrotate.d/corosync
     mode: "0644"
     owner: root
-  when: pacemaker_corosync_use_logfile | bool
+  when:
+    - pacemaker_corosync_use_logfile | bool
 
 - name: Creates services directory
   file:
