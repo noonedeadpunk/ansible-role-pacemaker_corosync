@@ -1,27 +1,39 @@
 ---
-lint: |
-  set -e
-  yamllint .
-  ansible-lint -vv --exclude=.tox --exclude=molecule/default/converge.yml -x 204,208
 dependency:
   name: galaxy
+  enabled: false
+
 driver:
   name: docker
-verifier:
-  name: ansible
-provisioner:
-  name: ansible
-  options:
-    v: True
-  log: True
-  config_options:
-    defaults:
-      inject_facts_as_vars: false
+
 platforms:
   - name: pacemaker
-    image: "${docker_user:-quay.io/gotmax23}/${docker_image_tag:-ubuntu-systemd:focal}"
+    image: "${docker_user:-quay.io/gotmax23}/${docker_image_tag:-ubuntu-systemd:noble}"
     command: ""
     pre_build_image: true
     groups:
       - corosync
     privileged: true
+    networks:
+      - name: bridge
+      - name: pacemaker
+    docker_networks:
+      - name: pacemaker
+        ipam_config:
+          - subnet: 192.168.33.0/24
+
+provisioner:
+  name: ansible
+  options:
+    v: true
+  log: true
+  lint:
+    name: ansible-lint
+  playbooks:
+    converge: ../../tests/test.yml
+  config_options:
+    defaults:
+      inject_facts_as_vars: false
+
+scenario:
+  name: default

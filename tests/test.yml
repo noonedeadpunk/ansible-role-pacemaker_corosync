@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  vars_files:
+    - "pacemaker_corosync_local.yml"
+  roles:
+    - role: pacemaker_corosync

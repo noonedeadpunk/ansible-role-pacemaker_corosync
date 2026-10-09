@@ -1,8 +1,0 @@
-bashate>=0.2 # Apache-2.0
-flake8<2.6.0,>=2.5.4 # MIT
-docker<=7.0.0
-molecule==5.1.0
-molecule-plugins==23.5.0
-ansible-lint==6.19.0
-rich>=9.5.1,<13.5.0
-requests<=2.31.0
