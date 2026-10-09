@@ -1,15 +1,5 @@
 ---
 
-- name: Install required packages
-  ansible.builtin.package:
-    name: "{{ _pacemaker_corosync_install_packages }}"
-    state: present
-  when: _pacemaker_corosync_install_packages | length > 0
-  notify:
-    - Restart corosync
-    - Restart pacemaker
-    - Restart pacemaker-remote
-
 - name: Generates corosync key
   ansible.builtin.command: corosync-keygen
   args:

@@ -13,9 +13,10 @@
     - pacemaker
 
 - name: Importing pacemaker tasks
-  ansible.builtin.import_tasks: pacemaker.yml
+  ansible.builtin.import_tasks: install.yml
   tags:
     - pacemaker
+    - pacemaker-remote
 
 - name: Ensure that pacemaker-remote nodes are not part of cluster
   ansible.builtin.include_tasks:

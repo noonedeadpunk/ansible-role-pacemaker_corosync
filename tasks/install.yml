@@ -1,0 +1,18 @@
+---
+
+- name: Install required packages
+  ansible.builtin.package:
+    name: "{{ _pacemaker_corosync_install_packages }}"
+    state: present
+  when: _pacemaker_corosync_install_packages | length > 0
+  notify:
+    - Restart corosync
+    - Restart pacemaker
+    - Restart pacemaker-remote
+
+- name: Include pacemaker/corosync tasks
+  ansible.builtin.include_tasks:
+    file: pacemaker.yml
+  when:
+    - pacemaker_corosync_group in groups
+    - inventory_hostname in groups[pacemaker_corosync_group]
