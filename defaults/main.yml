@@ -12,6 +12,6 @@ pacemaker_corosync_bootstrap_node: "{{ groups[pacemaker_corosync_group] | first 
 
 # Centos EPEL repository options (for haveged)
 pacemaker_corosync_haveged_enabled: true
-pacemaker_corosync_centos_epel_mirror: "{{ centos_epel_mirror | default('http://download.fedoraproject.org/pub/epel') }}"
+pacemaker_corosync_centos_epel_mirror: "{{ centos_epel_mirror | default('http://dl.fedoraproject.org/pub/epel') }}"
 pacemaker_corosync_centos_epel_key: >-
-  {{ centos_epel_key | default('http://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-' ~ ansible_facts['distribution_major_version']) }}
+  {{ centos_epel_key | default('http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-' ~ ansible_facts['distribution_major_version']) }}
