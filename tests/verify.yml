@@ -1,0 +1,85 @@
+---
+- name: Verify corosync and pacemaker cluster state
+  hosts: all
+  vars:
+    pacemaker_corosync_group: corosync
+    pacemaker_remote_group: pacemaker_remote
+    _pacemaker_remote_group_exists: "{{ (pacemaker_remote_group is defined and pacemaker_remote_group in groups) }}"
+  pre_tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+  tasks:
+    - name: Verify cluster node services and status
+      when:
+        - pacemaker_corosync_group in groups
+        - inventory_hostname in groups[pacemaker_corosync_group]
+      block:
+        - name: Assert corosync/pacemaker service is running
+          ansible.builtin.assert:
+            that:
+              - ansible_facts.services['corosync.service'] is defined
+              - ansible_facts.services['corosync.service'].state == 'running'
+              - ansible_facts.services['pacemaker.service'] is defined
+              - ansible_facts.services['pacemaker.service'].state == 'running'
+
+        - name: Check corosync quorum status
+          ansible.builtin.command: corosync-quorumtool -s
+          register: _corosync_quorumtool
+          changed_when: false
+
+        - name: Verify corosync cluster is quorate
+          ansible.builtin.assert:
+            that:
+              - _corosync_quorumtool.rc == 0
+              - "'Quorate:          Yes' in _corosync_quorumtool.stdout or 'Flags:            Quorate' in _corosync_quorumtool.stdout"
+            fail_msg: "Cluster is not quorate: {{ _corosync_quorumtool.stdout }}"
+
+        - name: Wait for Pacemaker cluster to become quorate and DC elected
+          ansible.builtin.command: crm_mon -1
+          register: _crm_mon_status
+          until:
+            - _crm_mon_status.rc == 0
+            - "'Current DC:' in _crm_mon_status.stdout"
+            - "'Current DC: NONE' not in _crm_mon_status.stdout"
+            - "'UNCLEAN' not in _crm_mon_status.stdout"
+          retries: 12
+          delay: 5
+          changed_when: false
+
+        - name: Verify all corosync cluster nodes are online in Pacemaker
+          ansible.builtin.assert:
+            that:
+              - "item in _crm_mon_status.stdout"
+            fail_msg: "Node {{ item }} is not online according to crm_mon: {{ _crm_mon_status.stdout }}"
+          loop: "{{ groups[pacemaker_corosync_group] }}"
+
+    - name: Verify pacemaker-remote node services and status
+      when:
+        - _pacemaker_remote_group_exists
+        - inventory_hostname in groups[pacemaker_remote_group]
+      block:
+        - name: Assert corosync/pacemaker service is running
+          ansible.builtin.assert:
+            that:
+              - ansible_facts.services['corosync.service'] is defined
+              - ansible_facts.services['corosync.service'].state == 'running'
+              - ansible_facts.services['pacemaker_remote.service'] is defined
+              - ansible_facts.services['pacemaker_remote.service'].state == 'running'
+
+        - name: Verify pacemaker_remote port is listening
+          ansible.builtin.wait_for:
+            port: 3121
+            host: "127.0.0.1"
+            timeout: 15
+
+    - name: Check corosync ring status
+      ansible.builtin.command: corosync-cfgtool -s
+      register: _corosync_cfgtool
+      changed_when: false
+
+    - name: Verify corosync ring has no faults
+      ansible.builtin.assert:
+        that:
+          - _corosync_cfgtool.rc == 0
+          - "'fault' not in _corosync_cfgtool.stdout | lower"
+        fail_msg: "Corosync ring has faults: {{ _corosync_cfgtool.stdout }}"
