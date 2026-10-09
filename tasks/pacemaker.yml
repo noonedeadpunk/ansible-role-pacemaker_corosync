@@ -93,7 +93,9 @@
     creates: /etc/corosync/authkey
   when:
     - inventory_hostname == groups[pacemaker_corosync_group][0]
-  notify: Restart corosync
+  notify:
+    - Restart corosync
+    - Restart pacemaker
 
 - name: Fetch authkey for other nodes
   ansible.builtin.slurp:
@@ -111,7 +113,9 @@
     mode: "0400"
   when:
     - inventory_hostname != groups[pacemaker_corosync_group][0]
-  notify: Restart corosync
+  notify:
+    - Restart corosync
+    - Restart pacemaker
 
 - name: Chowns authkeys
   ansible.builtin.file:
@@ -126,7 +130,9 @@
     dest: /etc/corosync/corosync.conf
     mode: "0400"
     owner: root
-  notify: Restart corosync
+  notify:
+    - Restart corosync
+    - Restart pacemaker
 
 - name: Creates log directory
   ansible.builtin.file:
@@ -157,7 +163,9 @@
     dest: /etc/corosync/service.d/pcmk
     owner: root
     mode: "0400"
-  notify: Restart corosync
+  notify:
+    - Restart corosync
+    - Restart pacemaker
 
 - name: Adds ferm filtering
   ansible.builtin.template:

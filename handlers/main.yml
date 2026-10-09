@@ -1,8 +1,14 @@
 ---
 - name: Restart corosync
   ansible.builtin.service:
-    name: "{{ item }}"
+    name: corosync
     state: restarted
     enabled: true
-  with_items:
-    - corosync
+
+- name: Restart pacemaker
+  ansible.builtin.service:
+    name: pacemaker
+    state: restarted
+    enabled: true
+  when:
+    - inventory_hostname in groups[pacemaker_corosync_group]
