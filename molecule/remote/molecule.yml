@@ -1,0 +1,64 @@
+---
+dependency:
+  name: galaxy
+  enabled: false
+
+driver:
+  name: docker
+
+platforms:
+  - name: pacemaker01
+    groups:
+      - corosync
+    <<: &host_config
+      image: "${docker_user:-quay.io/gotmax23}/${docker_image_tag:-ubuntu-systemd:noble}"
+      command: ""
+      pre_build_image: true
+      privileged: true
+      networks:
+        - name: bridge
+        - name: pacemaker-remote
+      docker_networks:
+        - name: pacemaker-remote
+          ipam_config:
+            - subnet: 192.168.34.0/24
+  - name: pacemaker02
+    groups:
+      - corosync
+    <<: *host_config
+  - name: pacemaker03
+    groups:
+      - corosync
+    <<: *host_config
+  - name: pacemaker-remote01
+    groups:
+      - pacemaker_remote
+    networks:
+      - name: bridge
+      - name: noop
+      - name: pacemaker-remote
+    docker_networks:
+      - name: noop
+      - name: pacemaker-remote
+        ipam_config:
+          - subnet: 192.168.34.0/24
+    <<: *host_config
+
+provisioner:
+  name: ansible
+  options:
+    v: true
+  log: true
+  lint:
+    name: ansible-lint
+  playbooks:
+    prepare: ../default/prepare.yml
+    converge: ../../tests/test_remote.yml
+    side_effect: ../../tests/side_effect_remote.yml
+    verify: ../../tests/verify.yml
+  config_options:
+    defaults:
+      inject_facts_as_vars: false
+
+scenario:
+  name: remote

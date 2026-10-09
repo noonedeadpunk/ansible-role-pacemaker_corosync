@@ -1,13 +1,18 @@
 ---
 - name: Verify corosync and pacemaker cluster state
   hosts: all
-  vars:
-    pacemaker_corosync_group: corosync
-    pacemaker_remote_group: pacemaker_remote
-    _pacemaker_remote_group_exists: "{{ (pacemaker_remote_group is defined and pacemaker_remote_group in groups) }}"
   pre_tasks:
+    - name: Load scenario variables
+      ansible.builtin.include_vars:
+        file: "vars_{{ molecule_yml.scenario.name | default(lookup('env', 'MOLECULE_SCENARIO_NAME') | default('default')) }}.yml"
+
+    - name: Set pacemaker remote group existence fact
+      ansible.builtin.set_fact:
+        _pacemaker_remote_group_exists: "{{ (pacemaker_remote_group is defined and pacemaker_remote_group and pacemaker_remote_group in groups) | bool }}"
+
     - name: Gather service facts
       ansible.builtin.service_facts:
+
   tasks:
     - name: Verify cluster node services and status
       when:
@@ -34,6 +39,18 @@
               - "'Quorate:          Yes' in _corosync_quorumtool.stdout or 'Flags:            Quorate' in _corosync_quorumtool.stdout"
             fail_msg: "Cluster is not quorate: {{ _corosync_quorumtool.stdout }}"
 
+        - name: Check corosync ring status
+          ansible.builtin.command: corosync-cfgtool -s
+          register: _corosync_cfgtool
+          changed_when: false
+
+        - name: Verify corosync ring has no faults
+          ansible.builtin.assert:
+            that:
+              - _corosync_cfgtool.rc == 0
+              - "'fault' not in _corosync_cfgtool.stdout | lower"
+            fail_msg: "Corosync ring has faults: {{ _corosync_cfgtool.stdout }}"
+
         - name: Wait for Pacemaker cluster to become quorate and DC elected
           ansible.builtin.command: crm_mon -1
           register: _crm_mon_status
@@ -53,33 +70,79 @@
             fail_msg: "Node {{ item }} is not online according to crm_mon: {{ _crm_mon_status.stdout }}"
           loop: "{{ groups[pacemaker_corosync_group] }}"
 
-    - name: Verify pacemaker-remote node services and status
-      when:
-        - _pacemaker_remote_group_exists
-        - inventory_hostname in groups[pacemaker_remote_group]
-      block:
-        - name: Assert corosync/pacemaker service is running
+        - name: Verify pacemaker authkey exists on cluster nodes
+          ansible.builtin.stat:
+            path: /etc/pacemaker/authkey
+          register: _cluster_authkey
+
+        - name: Assert pacemaker authkey is valid on cluster nodes
           ansible.builtin.assert:
             that:
-              - ansible_facts.services['corosync.service'] is defined
-              - ansible_facts.services['corosync.service'].state == 'running'
+              - _cluster_authkey.stat.exists
+              - _cluster_authkey.stat.mode == '0400'
+            fail_msg: "Pacemaker authkey is missing or has incorrect mode on cluster node {{ inventory_hostname }}"
+
+        - name: Verify remote node port 3121 is reachable from cluster nodes over remote ring interface
+          ansible.builtin.wait_for:
+            host: >-
+              {{ hostvars[item]['ansible_facts'][hostvars[item]['pacemaker_remote_ring_interface'] |
+                 replace('-', '_')]['ipv4']['address'] }}
+            port: 3121
+            timeout: 15
+          loop: "{{ groups.get(pacemaker_remote_group, []) }}"
+          when:
+            - _pacemaker_remote_group_exists | bool
+            - inventory_hostname == groups[pacemaker_corosync_group][0]
+
+    - name: Verify pacemaker-remote node services and status
+      when:
+        - _pacemaker_remote_group_exists | bool
+        - inventory_hostname in groups.get(pacemaker_remote_group, [])
+      block:
+        - name: Assert corosync service is not running on remote node
+          ansible.builtin.assert:
+            that:
+              - ansible_facts.services['corosync.service'] is not defined or ansible_facts.services['corosync.service'].state != 'running'
+            fail_msg: "Corosync service should not be running on remote node {{ inventory_hostname }}"
+
+        - name: Assert pacemaker service is not running on remote node
+          ansible.builtin.assert:
+            that:
+              - ansible_facts.services['pacemaker.service'] is not defined or ansible_facts.services['pacemaker.service'].state != 'running'
+            fail_msg: "Pacemaker service should not be running on remote node {{ inventory_hostname }}"
+
+        - name: Verify legacy corosync configuration is absent on remote node
+          ansible.builtin.stat:
+            path: /etc/corosync/corosync.conf
+          register: _legacy_corosync_conf
+
+        - name: Assert legacy corosync.conf does not exist on remote node
+          ansible.builtin.assert:
+            that:
+              - not _legacy_corosync_conf.stat.exists
+            fail_msg: "Legacy corosync.conf should not exist on remote node {{ inventory_hostname }}"
+
+        - name: Assert pacemaker-remote service is running
+          ansible.builtin.assert:
+            that:
               - ansible_facts.services['pacemaker_remote.service'] is defined
               - ansible_facts.services['pacemaker_remote.service'].state == 'running'
+            fail_msg: "Pacemaker remote service is not running on {{ inventory_hostname }}"
 
-        - name: Verify pacemaker_remote port is listening
+        - name: Verify pacemaker_remote port is listening on remote ring interface
           ansible.builtin.wait_for:
             port: 3121
-            host: "127.0.0.1"
+            host: "{{ ansible_facts[pacemaker_remote_ring_interface | replace('-', '_')]['ipv4']['address'] }}"
             timeout: 15
 
-    - name: Check corosync ring status
-      ansible.builtin.command: corosync-cfgtool -s
-      register: _corosync_cfgtool
-      changed_when: false
+        - name: Verify pacemaker authkey exists on remote node
+          ansible.builtin.stat:
+            path: /etc/pacemaker/authkey
+          register: _remote_authkey
 
-    - name: Verify corosync ring has no faults
-      ansible.builtin.assert:
-        that:
-          - _corosync_cfgtool.rc == 0
-          - "'fault' not in _corosync_cfgtool.stdout | lower"
-        fail_msg: "Corosync ring has faults: {{ _corosync_cfgtool.stdout }}"
+        - name: Assert pacemaker authkey permissions on remote node
+          ansible.builtin.assert:
+            that:
+              - _remote_authkey.stat.exists
+              - _remote_authkey.stat.mode == '0400'
+            fail_msg: "/etc/pacemaker/authkey does not exist or has incorrect permissions on {{ inventory_hostname }}"
