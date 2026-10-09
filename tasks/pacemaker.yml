@@ -5,30 +5,30 @@
   args:
     creates: /etc/corosync/authkey
   when:
-    - inventory_hostname == groups[pacemaker_corosync_group][0]
+    - inventory_hostname == pacemaker_corosync_bootstrap_node
   notify:
     - Restart corosync
     - Restart pacemaker
 
-- name: Fetch authkey for other nodes
-  ansible.builtin.slurp:
-    src: /etc/corosync/authkey
-  delegate_to: "{{ groups[pacemaker_corosync_group][0] }}"
-  check_mode: false
-  register: _corosync_authkey
+- name: Distribute generated corosync authkey
   when:
-    - inventory_hostname != groups[pacemaker_corosync_group][0]
+    - inventory_hostname != pacemaker_corosync_bootstrap_node
+  block:
+    - name: Fetch authkey for other nodes
+      ansible.builtin.slurp:
+        src: /etc/corosync/authkey
+      delegate_to: "{{ groups[pacemaker_corosync_group][0] }}"
+      check_mode: false
+      register: _corosync_authkey
 
-- name: Copy authkey to other nodes
-  ansible.builtin.copy:
-    content: "{{ _corosync_authkey['content'] | b64decode }}"
-    dest: /etc/corosync/authkey
-    mode: "0400"
-  when:
-    - inventory_hostname != groups[pacemaker_corosync_group][0]
-  notify:
-    - Restart corosync
-    - Restart pacemaker
+    - name: Copy authkey to other nodes
+      ansible.builtin.copy:
+        content: "{{ _corosync_authkey['content'] | b64decode }}"
+        dest: /etc/corosync/authkey
+        mode: "0400"
+      notify:
+        - Restart corosync
+        - Restart pacemaker
 
 - name: Chowns authkeys
   ansible.builtin.file:

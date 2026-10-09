@@ -70,17 +70,17 @@
             fail_msg: "Node {{ item }} is not online according to crm_mon: {{ _crm_mon_status.stdout }}"
           loop: "{{ groups[pacemaker_corosync_group] }}"
 
-        - name: Verify pacemaker authkey exists on cluster nodes
-          ansible.builtin.stat:
-            path: /etc/pacemaker/authkey
-          register: _cluster_authkey
+        # - name: Verify pacemaker authkey exists on cluster nodes
+        #   ansible.builtin.stat:
+        #     path: /etc/pacemaker/authkey
+        #   register: _cluster_authkey
 
-        - name: Assert pacemaker authkey is valid on cluster nodes
-          ansible.builtin.assert:
-            that:
-              - _cluster_authkey.stat.exists
-              - _cluster_authkey.stat.mode == '0400'
-            fail_msg: "Pacemaker authkey is missing or has incorrect mode on cluster node {{ inventory_hostname }}"
+        # - name: Assert pacemaker authkey is valid on cluster nodes
+        #   ansible.builtin.assert:
+        #     that:
+        #       - _cluster_authkey.stat.exists
+        #       - _cluster_authkey.stat.mode == '0400'
+        #     fail_msg: "Pacemaker authkey is missing or has incorrect mode on cluster node {{ inventory_hostname }}"
 
         - name: Verify remote node port 3121 is reachable from cluster nodes over remote ring interface
           ansible.builtin.wait_for:

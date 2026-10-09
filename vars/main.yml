@@ -11,7 +11,7 @@ _pacemaker_corosync_install_packages: |-
   {% endif %}
   {% if pacemaker_corosync_haveged_enabled | bool %}
   {%   set _ = _packages.append('haveged') %}
-  {% endof %}
+  {% endif %}
   {{ _packages }}
 
 _centos_ha_repo_name:
