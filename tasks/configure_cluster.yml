@@ -143,6 +143,7 @@
           - "{{ item.name }}"
           - avoids
           - "{{ item.avoid_node }}"
+          - --force
       loop: "{{ pacemaker_stonith_devices | default([]) }}"
       when:
         - item.avoid_node is defined
