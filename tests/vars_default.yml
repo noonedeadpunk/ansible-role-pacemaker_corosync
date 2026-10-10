@@ -1,3 +1,14 @@
 ---
 pacemaker_corosync_group: corosync
 pacemaker_corosync_ring_interface: eth1
+
+pacemaker_cluster_properties:
+  stonith-enabled: true
+  stonith-action: "off"
+
+pacemaker_stonith_devices:
+  - name: "fence-dummy"
+    agent: "fence_watchdog"
+    params:
+      pcmk_host_list: "pacemaker01,pacemaker02,pacemaker03"
+    avoid_node: "pacemaker01"

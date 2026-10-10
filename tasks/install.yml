@@ -12,7 +12,7 @@
 
 - name: Include pacemaker/corosync tasks
   ansible.builtin.include_tasks:
-    file: pacemaker.yml
+    file: install_pacemaker.yml
     apply:
       tags:
         - pacemaker
@@ -24,7 +24,7 @@
 
 - name: Include pacemaker-remote tasks
   ansible.builtin.include_tasks:
-    file: pacemaker_remote.yml
+    file: install_pacemaker_remote.yml
     apply:
       tags:
         - pacemaker-remote

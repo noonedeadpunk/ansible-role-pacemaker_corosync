@@ -30,6 +30,9 @@
         - name: Check corosync quorum status
           ansible.builtin.command: corosync-quorumtool -s
           register: _corosync_quorumtool
+          until: _corosync_quorumtool.rc == 0
+          retries: 10
+          delay: 2
           changed_when: false
 
         - name: Verify corosync cluster is quorate
@@ -90,7 +93,7 @@
             - "item in _crm_mon_remote_status.stdout"
             - "'UNCLEAN' not in _crm_mon_remote_status.stdout"
             - "'RemoteOFFLINE' not in _crm_mon_remote_status.stdout"
-          retries: 15
+          retries: 30
           delay: 5
           changed_when: false
           loop: "{{ groups.get(pacemaker_remote_group, []) }}"
@@ -98,6 +101,89 @@
             - _pacemaker_remote_group_exists | bool
             - inventory_hostname == groups[pacemaker_corosync_group][0]
             - pacemaker_remote_register_resource | default(true) | bool
+
+        - name: Verify cluster properties
+          when:
+            - inventory_hostname == groups[pacemaker_corosync_group][0]
+            - pacemaker_cluster_properties is defined
+            - pacemaker_cluster_properties | dict2items | length > 0
+          block:
+            - name: Check configured cluster properties
+              ansible.builtin.command: pcs property config --output-format=json
+              register: _verify_property_config
+              changed_when: false
+
+            - name: Assert cluster properties match configuration
+              vars:
+                _verified_properties: |-
+                  {% set _p = [] %}
+                  {% for nvset in (_verify_property_config.stdout | from_json)['nvsets'] | default([]) %}
+                  {%   for pair in nvset.get('nvpairs', []) %}
+                  {%     set _ = _p.append(pair.name ~ '=' ~ pair.value) %}
+                  {%   endfor %}
+                  {% endfor %}
+                  {{ _p }}
+                _verified_property_names: >-
+                  {{
+                    (_verify_property_config.stdout | from_json)['nvsets'] | default([])
+                      | map(attribute='nvpairs') | list | sum(start=[])
+                      | map(attribute='name') | list
+                  }}
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    (item.value is none or item.value == '') | ternary(
+                      item.key not in _verified_property_names,
+                      (item.key ~ '=' ~ (item.value | string | lower)) in _verified_properties
+                    )
+                fail_msg: "Cluster property {{ item.key }} did not match expected value: {{ _verified_properties }}"
+              loop: "{{ pacemaker_cluster_properties | dict2items }}"
+
+        - name: Verify stonith devices and constraints
+          when:
+            - inventory_hostname == groups[pacemaker_corosync_group][0]
+            - pacemaker_stonith_devices is defined
+            - pacemaker_stonith_devices | length > 0
+          block:
+            - name: Check configured stonith devices
+              ansible.builtin.command: pcs stonith config --output-format=json
+              register: _verify_stonith_config
+              changed_when: false
+
+            - name: Assert stonith devices are configured
+              vars:
+                _verified_stonith_devices: >-
+                  {{
+                    (_verify_stonith_config.stdout | from_json)['primitives'] | default([])
+                      | map(attribute='id')
+                      | list
+                  }}
+              ansible.builtin.assert:
+                that:
+                  - item.name in _verified_stonith_devices
+                fail_msg: "Stonith device {{ item.name }} not found: {{ _verified_stonith_devices }}"
+              loop: "{{ pacemaker_stonith_devices }}"
+
+            - name: Check configured constraints
+              ansible.builtin.command: pcs constraint config --output-format=json
+              register: _verify_constraint_config
+              changed_when: false
+              when: pacemaker_stonith_devices | selectattr('avoid_node', 'defined') | list | length > 0
+
+            - name: Assert location constraints for stonith devices
+              vars:
+                _verified_location_constraints: >-
+                  {% set _c = [] %}
+                  {% for loc in (_verify_constraint_config.stdout | from_json)['location'] | default([]) %}
+                  {%   set _ = _c.append(loc.resource_id ~ ':' ~ loc.attributes.node) %}
+                  {% endfor %}
+                  {{ _c }}
+              ansible.builtin.assert:
+                that:
+                  - (item.name ~ ':' ~ item.avoid_node) in _verified_location_constraints
+                fail_msg: "Location constraint for {{ item.name }} avoiding {{ item.avoid_node }} not found: {{ _verified_location_constraints }}"
+              loop: "{{ pacemaker_stonith_devices }}"
+              when: item.avoid_node is defined
 
     - name: Verify pacemaker-remote node services and status
       when:
