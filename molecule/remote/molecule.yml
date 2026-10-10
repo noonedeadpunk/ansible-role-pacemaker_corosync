@@ -7,7 +7,7 @@ driver:
   name: docker
 
 platforms:
-  - name: pacemaker01
+  - name: pacemaker-cluster01
     groups:
       - corosync
     networks:
@@ -25,14 +25,14 @@ platforms:
         - name: pacemaker-remote
           ipam_config:
             - subnet: 192.168.34.0/24
-  - name: pacemaker02
+  - name: pacemaker-cluster02
     <<: *host_config
     groups:
       - corosync
     networks:
       - name: bridge
       - name: pacemaker-remote
-  - name: pacemaker03
+  - name: pacemaker-cluster03
     <<: *host_config
     groups:
       - corosync
@@ -56,7 +56,7 @@ provisioner:
   lint:
     name: ansible-lint
   playbooks:
-    prepare: ../default/prepare.yml
+    prepare: ../../tests/prepare.yml
     converge: ../../tests/test_remote.yml
     side_effect: ../../tests/side_effect_remote.yml
     verify: ../../tests/verify.yml
