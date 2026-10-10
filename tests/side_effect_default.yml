@@ -1,0 +1,153 @@
+---
+- name: Simulate unmanaged cluster properties and stonith devices
+  hosts: corosync
+  vars_files:
+    - "vars_default.yml"
+  pre_tasks:
+    - name: Configure pacemaker_cluster_properties to unset batch-limit
+      ansible.builtin.set_fact:
+        pacemaker_cluster_properties: "{{ pacemaker_cluster_properties | combine({'batch-limit': none}) }}"
+
+    - name: Inject unmanaged configuration
+      when: inventory_hostname == groups[pacemaker_corosync_group][0]
+      block:
+        - name: Ensure clean slate for injection
+          vars:
+            _target_node: "{{ groups[pacemaker_corosync_group][1] | default(groups[pacemaker_corosync_group] | last) }}"
+          ansible.builtin.command: "{{ item }}"
+          loop:
+            - pcs stonith delete rogue-fence
+            - "pcs constraint delete location-fence-dummy-{{ _target_node }}--INFINITY"
+          failed_when: false
+          changed_when: false
+
+        - name: Set unmanaged cluster property
+          ansible.builtin.command: pcs property set batch-limit=50
+          changed_when: true
+
+        - name: Create unmanaged stonith device
+          ansible.builtin.command:
+            argv:
+              - pcs
+              - stonith
+              - create
+              - rogue-fence
+              - fence_watchdog
+              - "pcmk_host_list={{ groups[pacemaker_corosync_group] | join(',') }}"
+              - --force
+          changed_when: true
+
+        - name: Create unmanaged location constraint for managed stonith device
+          ansible.builtin.command:
+            argv:
+              - pcs
+              - constraint
+              - location
+              - fence-dummy
+              - avoids
+              - "{{ groups[pacemaker_corosync_group][1] | default(groups[pacemaker_corosync_group] | last) }}"
+          changed_when: true
+
+        - name: Query properties to verify injection
+          ansible.builtin.command: pcs property config --output-format=json
+          register: _injected_props
+          changed_when: false
+
+        - name: Assert unmanaged property was injected
+          ansible.builtin.assert:
+            that:
+              - "'batch-limit' in (_injected_props.stdout | from_json)['nvsets'][0]['nvpairs'] | map(attribute='name') | list"
+
+        - name: Query stonith to verify injection
+          ansible.builtin.command: pcs stonith config --output-format=json
+          register: _injected_stonith
+          changed_when: false
+
+        - name: Assert unmanaged stonith device was injected
+          ansible.builtin.assert:
+            that:
+              - "'rogue-fence' in (_injected_stonith.stdout | from_json)['primitives'] | map(attribute='id') | list"
+
+        - name: Query constraints to verify injection
+          ansible.builtin.command: pcs constraint config --output-format=json
+          register: _injected_constraints
+          changed_when: false
+
+        - name: Assert unmanaged constraint was injected
+          vars:
+            _injected_location_pairs: |-
+              {% set _c = [] %}
+              {% for loc in (_injected_constraints.stdout | from_json)['location'] | default([]) %}
+              {%   set _ = _c.append(loc.resource_id ~ ':' ~ loc.attributes.node) %}
+              {% endfor %}
+              {{ _c }}
+          ansible.builtin.assert:
+            that:
+              - "'fence-dummy:' ~ (groups[pacemaker_corosync_group][1] | default(groups[pacemaker_corosync_group] | last)) in _injected_location_pairs"
+
+  roles:
+    - role: pacemaker_corosync
+
+  post_tasks:
+    - name: Verify unmanaged configuration was purged
+      when: inventory_hostname == groups[pacemaker_corosync_group][0]
+      block:
+        - name: Query properties after role run
+          ansible.builtin.command: pcs property config --output-format=json
+          register: _post_props
+          changed_when: false
+
+        - name: Assert unmanaged property was removed and managed properties preserved
+          vars:
+            _post_prop_pairs: |-
+              {% set _p = [] %}
+              {% for nvset in (_post_props.stdout | from_json)['nvsets'] | default([]) %}
+              {%   for pair in nvset.get('nvpairs', []) %}
+              {%     set _ = _p.append(pair.name ~ '=' ~ pair.value) %}
+              {%   endfor %}
+              {% endfor %}
+              {{ _p }}
+          ansible.builtin.assert:
+            that:
+              - "'batch-limit' not in (_post_props.stdout | from_json)['nvsets'][0]['nvpairs'] | map(attribute='name') | list"
+              - "'stonith-enabled=true' in _post_prop_pairs"
+              - "'stonith-action=off' in _post_prop_pairs"
+            fail_msg: "Unmanaged property was not removed or managed properties were lost: {{ _post_props.stdout }}"
+
+        - name: Query stonith after role run
+          ansible.builtin.command: pcs stonith config --output-format=json
+          register: _post_stonith
+          changed_when: false
+
+        - name: Assert unmanaged stonith was removed and managed stonith preserved
+          vars:
+            _post_stonith_ids: >-
+              {{
+                (_post_stonith.stdout | from_json)['primitives'] | default([])
+                  | map(attribute='id')
+                  | list
+              }}
+          ansible.builtin.assert:
+            that:
+              - "'rogue-fence' not in _post_stonith_ids"
+              - "'fence-dummy' in _post_stonith_ids"
+            fail_msg: "Unmanaged stonith rogue-fence was not removed or fence-dummy was lost: {{ _post_stonith_ids }}"
+
+        - name: Query constraints after role run
+          ansible.builtin.command: pcs constraint config --output-format=json
+          register: _post_constraints
+          changed_when: false
+
+        - name: Assert unmanaged constraint was removed and managed constraint preserved
+          vars:
+            _post_location_pairs: |-
+              {% set _c = [] %}
+              {% for loc in (_post_constraints.stdout | from_json)['location'] | default([]) %}
+              {%   set _ = _c.append(loc.resource_id ~ ':' ~ loc.attributes.node) %}
+              {% endfor %}
+              {{ _c }}
+          ansible.builtin.assert:
+            that:
+              - "'fence-dummy:' ~ (groups[pacemaker_corosync_group][1] | default(groups[pacemaker_corosync_group] | last)) not in _post_location_pairs"
+              - "'fence-dummy:' ~ (groups[pacemaker_corosync_group] | first) in _post_location_pairs"
+            fail_msg: "Unmanaged constraint was not removed or desired constraint was lost: {{ _post_location_pairs }}"

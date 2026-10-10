@@ -2,6 +2,6 @@
 - name: Converge
   hosts: all
   vars_files:
-    - "vars_default.yml"
+    - "vars_remote.yml"
   roles:
     - role: pacemaker_corosync

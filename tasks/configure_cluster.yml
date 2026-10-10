@@ -1,0 +1,150 @@
+---
+- name: Configure cluster properties
+  when:
+    - pacemaker_cluster_properties | dict2items | length > 0
+  block:
+    - name: Query current cluster properties
+      ansible.builtin.command: pcs property config --output-format=json
+      register: _pcs_property_config
+      until: _pcs_property_config.rc == 0
+      retries: 10
+      delay: 2
+      changed_when: false
+
+    - name: Unset cluster properties
+      vars:
+        _existing_property_names: >-
+          {{
+            (_pcs_property_config.stdout | from_json)['nvsets'] | default([])
+              | selectattr('nvpairs', 'defined')
+              | map(attribute='nvpairs')
+              | flatten
+              | map(attribute='name')
+              | list
+          }}
+      ansible.builtin.command: "pcs property unset {{ item.key }}"
+      loop: "{{ pacemaker_cluster_properties | dict2items }}"
+      when:
+        - item.value is none or item.value == ''
+        - item.key in _existing_property_names
+      changed_when: true
+
+    - name: Set cluster properties
+      vars:
+        _existing_cluster_properties: |-
+          {% set _p = [] %}
+          {% for nvset in (_pcs_property_config.stdout | from_json)['nvsets'] | default([]) %}
+          {%   for pair in nvset.get('nvpairs', []) %}
+          {%     set _ = _p.append(pair.name ~ '=' ~ pair.value) %}
+          {%   endfor %}
+          {% endfor %}
+          {{ _p }}
+      ansible.builtin.command: "pcs property set {{ item.key }}={{ item.value | string | lower }}"
+      loop: "{{ pacemaker_cluster_properties | dict2items }}"
+      when:
+        - item.value is not none
+        - item.value != ''
+        - (item.key ~ '=' ~ (item.value | string | lower)) not in _existing_cluster_properties
+      changed_when: true
+
+- name: Configure STONITH devices and constraints
+  when:
+    - pacemaker_stonith_devices is defined
+  block:
+    - name: Query configured stonith devices
+      ansible.builtin.command: pcs stonith config --output-format=json
+      register: _pcs_stonith_config
+      until: _pcs_stonith_config.rc == 0
+      retries: 10
+      delay: 2
+      changed_when: false
+
+    - name: Delete unmanaged stonith devices
+      ansible.builtin.command:
+        argv:
+          - crm_resource
+          - --delete
+          - --resource
+          - "{{ item }}"
+          - --resource-type
+          - primitive
+      loop: >-
+        {{
+          ((_pcs_stonith_config.stdout | from_json)['primitives'] | default([])
+            | map(attribute='id') | list)
+          | difference((pacemaker_stonith_devices | default([])) | map(attribute='name') | list)
+        }}
+      changed_when: true
+
+    - name: Create stonith devices
+      vars:
+        _existing_stonith_devices: >-
+          {{
+            (_pcs_stonith_config.stdout | from_json)['primitives'] | default([])
+              | map(attribute='id')
+              | list
+          }}
+      ansible.builtin.command:
+        argv: >-
+          {{
+            ['pcs', 'stonith', 'create', item.name, item.agent]
+            + ((item.params | default({})).items() | map('join', '=') | list)
+            + ['--force']
+          }}
+      loop: "{{ pacemaker_stonith_devices | default([]) }}"
+      when:
+        - item.name not in _existing_stonith_devices
+      changed_when: true
+
+    - name: Query location constraints
+      ansible.builtin.command: pcs constraint config --output-format=json
+      register: _pcs_location_constraints
+      changed_when: false
+
+    - name: Delete unmanaged location constraints for stonith devices
+      vars:
+        _managed_stonith_devices: "{{ (pacemaker_stonith_devices | default([])) | map(attribute='name') | list }}"
+        _desired_location_constraints: |-
+          {% set _desired = [] %}
+          {% for s in pacemaker_stonith_devices | default([]) if s.avoid_node is defined %}
+          {%   set _ = _desired.append(s.name ~ ':' ~ s.avoid_node) %}
+          {% endfor %}
+          {{ _desired }}
+        _stale_location_constraints: |-
+          {% set _stale = [] %}
+          {% for loc in (_pcs_location_constraints.stdout | from_json)['location'] | default([]) %}
+          {%   if loc.resource_id in _managed_stonith_devices and (loc.resource_id ~ ':' ~ loc.attributes.node) not in _desired_location_constraints %}
+          {%     set _ = _stale.append(loc.attributes.constraint_id) %}
+          {%   endif %}
+          {% endfor %}
+          {{ _stale }}
+      ansible.builtin.command:
+        argv:
+          - pcs
+          - constraint
+          - delete
+          - "{{ item }}"
+      loop: "{{ _stale_location_constraints }}"
+      changed_when: true
+
+    - name: Configure location constraints for stonith devices
+      vars:
+        _existing_location_constraints: |-
+          {% set _c = [] %}
+          {% for loc in (_pcs_location_constraints.stdout | from_json)['location'] | default([]) %}
+          {%   set _ = _c.append(loc.resource_id ~ ':' ~ loc.attributes.node) %}
+          {% endfor %}
+          {{ _c }}
+      ansible.builtin.command:
+        argv:
+          - pcs
+          - constraint
+          - location
+          - "{{ item.name }}"
+          - avoids
+          - "{{ item.avoid_node }}"
+      loop: "{{ pacemaker_stonith_devices | default([]) }}"
+      when:
+        - item.avoid_node is defined
+        - (item.name ~ ':' ~ item.avoid_node) not in _existing_location_constraints
+      changed_when: true

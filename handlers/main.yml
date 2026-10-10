@@ -4,6 +4,9 @@
     name: corosync
     state: restarted
     enabled: true
+  when:
+    - pacemaker_corosync_group in groups
+    - inventory_hostname in groups[pacemaker_corosync_group]
 
 - name: Restart pacemaker
   ansible.builtin.service:
@@ -11,13 +14,14 @@
     state: restarted
     enabled: true
   when:
+    - pacemaker_corosync_group in groups
     - inventory_hostname in groups[pacemaker_corosync_group]
 
 - name: Restart pacemaker-remote
   ansible.builtin.service:
-    name: pacemaker-remote
+    name: pacemaker_remote
     state: restarted
     enabled: true
   when:
-    - _pacemaker_remote_group_exists
+    - _pacemaker_remote_group_exists | bool
     - inventory_hostname in groups[pacemaker_remote_group]

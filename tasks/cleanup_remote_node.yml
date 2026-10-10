@@ -1,0 +1,28 @@
+---
+
+- name: Stop and disable non-remote services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop:
+    - pacemaker
+    - corosync
+  failed_when: false
+
+- name: Remove pacemaker/corosync
+  ansible.builtin.package:
+    name:
+      - corosync
+      - pacemaker
+    state: absent
+  notify:
+    - Restart pacemaker-remote
+
+- name: Ensure legacy corosync configuration is removed on remote nodes
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/corosync/corosync.conf
+    - /etc/corosync/authkey

@@ -7,7 +7,7 @@ driver:
   name: docker
 
 platforms:
-  - name: pacemaker01
+  - name: default-pacemaker01
     <<: &host_config
       image: "${docker_user:-quay.io/gotmax23}/${docker_image_tag:-ubuntu-systemd:noble}"
       command: ""
@@ -15,6 +15,7 @@ platforms:
       groups:
         - corosync
       privileged: true
+      shm_size: 512m
       networks:
         - name: bridge
         - name: pacemaker
@@ -22,9 +23,9 @@ platforms:
         - name: pacemaker
           ipam_config:
             - subnet: 192.168.33.0/24
-  - name: pacemaker02
+  - name: default-pacemaker02
     <<: *host_config
-  - name: pacemaker03
+  - name: default-pacemaker03
     <<: *host_config
 
 provisioner:
@@ -35,7 +36,9 @@ provisioner:
   lint:
     name: ansible-lint
   playbooks:
+    prepare: ../../tests/prepare.yml
     converge: ../../tests/test.yml
+    side_effect: ../../tests/side_effect_default.yml
     verify: ../../tests/verify.yml
   config_options:
     defaults:

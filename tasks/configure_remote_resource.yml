@@ -1,0 +1,52 @@
+---
+
+- name: Query existing cluster resources
+  ansible.builtin.command: pcs resource config --output-format=json
+  register: _pcs_resource_config
+  until: _pcs_resource_config.rc == 0
+  retries: 10
+  delay: 2
+  changed_when: false
+
+- name: Determine existing remote resources
+  ansible.builtin.set_fact:
+    _existing_remote_resources: >-
+      {{
+        (_pcs_resource_config.stdout | from_json)['primitives'] | default([])
+          | selectattr('agent_name.standard', 'equalto', 'ocf')
+          | selectattr('agent_name.provider', 'equalto', 'pacemaker')
+          | selectattr('agent_name.type', 'equalto', 'remote')
+          | map(attribute='id')
+          | list
+      }}
+
+- name: Delete stale or non-remote resources from cluster
+  ansible.builtin.command:
+    argv:
+      - pcs
+      - resource
+      - delete
+      - "{{ item }}"
+      - --force
+  loop: "{{ _existing_remote_resources | difference(groups.get(pacemaker_remote_group, [])) }}"
+  changed_when: true
+
+- name: Register remote nodes in pacemaker
+  vars:
+    _remote_ip: "{{ hostvars[item]['ansible_facts'][_remote_iface]['ipv4']['address'] }}"
+    _remote_iface: "{{ hostvars[item]['pacemaker_remote_ring_interface'] | default(pacemaker_remote_ring_interface) | replace('-', '_') }}"
+  ansible.builtin.command:
+    argv:
+      - pcs
+      - resource
+      - create
+      - "{{ item }}"
+      - ocf:pacemaker:remote
+      - server={{ _remote_ip }}
+      - reconnect_interval={{ pacemaker_remote_reconnect_interval }}
+      - op
+      - monitor
+      - interval=30s
+      - --force
+  loop: "{{ groups.get(pacemaker_remote_group, []) | difference(_existing_remote_resources) }}"
+  changed_when: true

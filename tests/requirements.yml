@@ -15,3 +15,6 @@ collections:
   - name: ansible.posix
     source: https://github.com/ansible-collections/ansible.posix
     type: git
+  - name: ansible.utils
+    source: https://github.com/ansible-collections/ansible.utils
+    type: git
