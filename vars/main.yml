@@ -11,9 +11,6 @@ _pacemaker_corosync_install_packages: |-
   {% if _pacemaker_remote_group_exists and inventory_hostname in groups[pacemaker_remote_group] %}
   {%   set _ = _packages.append('pacemaker-remote') %}
   {% endif %}
-  {% if pacemaker_corosync_haveged_enabled | bool %}
-  {%   set _ = _packages.append('haveged') %}
-  {% endif %}
   {{ _packages }}
 
 _centos_ha_repo_name:

@@ -34,9 +34,3 @@ pacemaker_cluster_properties: {}
 #       pcmk_host_list: "node01"
 #     avoid_node: "node01"
 pacemaker_stonith_devices: []
-
-# Centos EPEL repository options (for haveged)
-pacemaker_corosync_haveged_enabled: true
-pacemaker_corosync_centos_epel_mirror: "{{ centos_epel_mirror | default('http://dl.fedoraproject.org/pub/epel') }}"
-pacemaker_corosync_centos_epel_key: >-
-  {{ centos_epel_key | default('http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-' ~ ansible_facts['distribution_major_version']) }}
