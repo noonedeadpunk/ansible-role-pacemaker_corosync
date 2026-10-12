@@ -1,0 +1,17 @@
+---
+- name: Cleanup docker networks
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Remove custom docker networks
+      community.docker.docker_network:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - pacemaker-network
+        - pacemaker-remote-network
+        - pacemaker-remote
+        - pacemaker
+        - noop-network
+        - noop

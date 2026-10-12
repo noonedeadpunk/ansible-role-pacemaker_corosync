@@ -16,14 +16,6 @@ platforms:
         - corosync
       privileged: true
       shm_size: 512m
-      networks_cli_compatible: false
-      networks:
-        - name: bridge
-        - name: pacemaker
-      docker_networks:
-        - name: pacemaker
-          ipam_config:
-            - subnet: 192.168.33.0/24
   - name: default-pacemaker02
     <<: *host_config
   - name: default-pacemaker03
@@ -37,6 +29,7 @@ provisioner:
   lint:
     name: ansible-lint
   playbooks:
+    cleanup: ../../tests/cleanup.yml
     prepare: ../../tests/prepare.yml
     converge: ../../tests/test.yml
     side_effect: ../../tests/side_effect_default.yml
