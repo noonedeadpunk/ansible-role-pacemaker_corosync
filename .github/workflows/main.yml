@@ -47,6 +47,7 @@ jobs:
         run: |
           python3 -m pip install ansible-core==${{ matrix.ansible-version }}
       - name: Test with molecule
+        timeout-minutes: 30
         run: |
           cd ${{ github.repository }}
           export docker_image_tag="${{ matrix.scenario.tag }}"
