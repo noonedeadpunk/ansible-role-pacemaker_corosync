@@ -32,7 +32,7 @@
               - stonith
               - create
               - rogue-fence
-              - fence_watchdog
+              - fence_dummy
               - "pcmk_host_list={{ groups[pacemaker_corosync_group] | join(',') }}"
               - --force
           changed_when: true

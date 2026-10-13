@@ -66,3 +66,9 @@
     - name: Show ansible_interfaces
       ansible.builtin.debug:
         var: ansible_facts['interfaces']
+
+    - name: Deploy dummy fence agent for stonith testing
+      ansible.builtin.copy:
+        src: files/fence_dummy.py
+        dest: /usr/sbin/fence_dummy
+        mode: "0755"

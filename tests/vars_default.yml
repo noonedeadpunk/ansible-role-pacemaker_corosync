@@ -8,7 +8,7 @@ pacemaker_cluster_properties:
 
 pacemaker_stonith_devices:
   - name: "fence-dummy"
-    agent: "fence_watchdog"
+    agent: "fence_dummy"
     params:
       pcmk_host_list: "{{ groups[pacemaker_corosync_group] | join(',') }}"
     avoid_node: "{{ groups[pacemaker_corosync_group] | first }}"
