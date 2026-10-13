@@ -1,0 +1,112 @@
+---
+- name: Simulate legacy corosync and pacemaker running on remote node
+  hosts: pacemaker_remote
+  vars_files:
+    - "vars_remote.yml"
+  pre_tasks:
+    - name: Stop pacemaker-remote service
+      ansible.builtin.service:
+        name: pacemaker_remote
+        state: stopped
+
+    - name: Ensure corosync and pacemaker packages are installed
+      ansible.builtin.package:
+        name:
+          - corosync
+          - pacemaker
+        state: present
+
+    - name: Create /etc/corosync directory
+      ansible.builtin.file:
+        path: /etc/corosync
+        state: directory
+        mode: "0755"
+        owner: root
+
+    - name: Place standalone legacy corosync configuration
+      ansible.builtin.copy:
+        content: |
+          totem {
+            version: 2
+            cluster_name: legacy
+            transport: udpu
+            interface {
+              ringnumber: 0
+              bindnetaddr: 127.0.0.1
+              broadcast: yes
+              mcastport: 5405
+            }
+          }
+          nodelist {
+            node {
+              ring0_addr: 127.0.0.1
+              nodeid: 1
+            }
+          }
+          quorum {
+            provider: corosync_votequorum
+            expected_votes: 1
+          }
+        dest: /etc/corosync/corosync.conf
+        mode: "0400"
+        owner: root
+
+    - name: Place legacy corosync authkey
+      ansible.builtin.command: dd if=/dev/urandom of=/etc/corosync/authkey bs=128 count=1
+      args:
+        creates: /etc/corosync/authkey
+
+    - name: Set permissions on legacy corosync authkey
+      ansible.builtin.file:
+        path: /etc/corosync/authkey
+        mode: "0400"
+        owner: root
+
+    - name: Start and enable legacy corosync and pacemaker services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - corosync
+        - pacemaker
+
+    - name: Gather service facts to confirm legacy services are running
+      ansible.builtin.service_facts:
+
+    - name: Assert legacy services are running prior to migration
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['corosync.service'] is defined
+          - ansible_facts.services['corosync.service'].state == 'running'
+          - ansible_facts.services['pacemaker.service'] is defined
+          - ansible_facts.services['pacemaker.service'].state == 'running'
+
+  roles:
+    - role: pacemaker_corosync
+
+  post_tasks:
+    - name: Gather service facts after migration
+      ansible.builtin.service_facts:
+
+    - name: Assert legacy corosync and pacemaker services were stopped
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['corosync.service'] is not defined or ansible_facts.services['corosync.service'].state != 'running'
+          - ansible_facts.services['pacemaker.service'] is not defined or ansible_facts.services['pacemaker.service'].state != 'running'
+        fail_msg: "Legacy services are still running on remote node after migration!"
+
+    - name: Assert legacy configuration files were removed
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: _legacy_files
+      loop:
+        - /etc/corosync/corosync.conf
+        - /etc/corosync/authkey
+
+    - name: Verify legacy files do not exist
+      ansible.builtin.assert:
+        that:
+          - not item.stat.exists
+        fail_msg: "Legacy file {{ item.item }} still exists on remote node after migration!"
+      loop: "{{ _legacy_files.results }}"

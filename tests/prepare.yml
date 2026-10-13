@@ -1,0 +1,74 @@
+---
+- name: Create docker networks
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    _pacemaker_network_name: "{{ ('pacemaker_remote' in groups) | ternary('pacemaker-remote-network', 'pacemaker-network') }}"
+    _pacemaker_network_subnet: "{{ ('pacemaker_remote' in groups) | ternary('192.168.34.0/24', '192.168.33.0/24') }}"
+  tasks:
+    - name: Ensure noop network exists for remote instances
+      community.docker.docker_network:
+        name: noop-network
+        state: present
+      when: "'pacemaker_remote' in groups"
+
+    - name: Ensure pacemaker network exists
+      community.docker.docker_network:
+        name: "{{ _pacemaker_network_name }}"
+        ipam_config:
+          - subnet: "{{ _pacemaker_network_subnet }}"
+        state: present
+
+- name: Prepare molecule instance
+  hosts: all
+  vars:
+    _pacemaker_network_name: "{{ ('pacemaker_remote' in groups) | ternary('pacemaker-remote-network', 'pacemaker-network') }}"
+  tasks:
+    - name: Apt update and install rsync, ping, iproute
+      ansible.builtin.apt:
+        update_cache: true
+        name:
+          - rsync
+          - inetutils-ping
+          - iproute2
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Yum install iproute to fix undefined ansible_default_ipv4.address
+      ansible.builtin.package:
+        name: iproute
+        state: present
+      when:
+        - ansible_facts['distribution'] == "CentOS"
+
+    - name: Attach remote instances to noop network
+      delegate_to: localhost
+      community.docker.docker_network:
+        name: noop-network
+        connected:
+          - "{{ inventory_hostname }}"
+        appends: true
+      when: "'pacemaker_remote' in group_names"
+
+    - name: Attach all instances to pacemaker network
+      delegate_to: localhost
+      community.docker.docker_network:
+        name: "{{ _pacemaker_network_name }}"
+        connected:
+          - "{{ inventory_hostname }}"
+        appends: true
+
+    - name: Re-collect network facts required after installation iproute
+      ansible.builtin.setup:
+        gather_subset: network
+
+    - name: Show ansible_interfaces
+      ansible.builtin.debug:
+        var: ansible_facts['interfaces']
+
+    - name: Deploy dummy fence agent for stonith testing
+      ansible.builtin.copy:
+        src: files/fence_dummy.py
+        dest: /usr/sbin/fence_dummy
+        mode: "0755"

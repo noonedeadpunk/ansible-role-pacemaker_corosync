@@ -5,12 +5,32 @@ pacemaker_corosync_group: false
 pacemaker_remote_group: false
 pacemaker_corosync_ring_interface: false
 pacemaker_remote_ring_interface: "{{ pacemaker_corosync_ring_interface }}"
+pacemaker_remote_register_resource: true
+pacemaker_remote_reconnect_interval: 15
 pacemaker_corosync_use_syslog: true
 pacemaker_corosync_use_logfile: false
+pacemaker_corosync_bootstrap_node: "{{ groups[pacemaker_corosync_group] | first }}"
 
+# Pacemaker cluster properties (key-value mapping)
+# Setting a property to null or "" unsets it (restoring cluster default)
+# Example:
+# pacemaker_cluster_properties:
+#   stonith-enabled: false
+#   stonith-action: off
+#   no-quorum-policy: stop
+#   batch-limit: null
+pacemaker_cluster_properties: {}
 
-# Centos EPEL repository options (for haveged)
-pacemaker_corosync_haveged_enabled: true
-pacemaker_corosync_centos_epel_mirror: "{{ centos_epel_mirror | default('http://download.fedoraproject.org/pub/epel') }}"
-pacemaker_corosync_centos_epel_key: >-
-  {{ centos_epel_key | default('http://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-' ~ ansible_facts['distribution_major_version']) }}
+# Pacemaker STONITH fencing devices
+# Example:
+# pacemaker_stonith_devices:
+#   - name: "ipmi-node01"
+#     agent: "fence_ipmilan"
+#     params:
+#       ip: "10.0.1.101"
+#       username: "admin"
+#       password: "secretpassword"
+#       lanplus: "1"
+#       pcmk_host_list: "node01"
+#     avoid_node: "node01"
+pacemaker_stonith_devices: []

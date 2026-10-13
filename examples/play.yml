@@ -1,7 +1,7 @@
 ---
 
 - name: Install pacemaker-corosync
-  hosts: "{{ pacemaker_corosync_group }}"
+  hosts: "{{ pacemaker_corosync_group | default('corosync', true) }}"
   become: true
   roles:
     - pacemaker_corosync

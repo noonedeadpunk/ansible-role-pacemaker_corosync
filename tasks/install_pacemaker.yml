@@ -1,0 +1,90 @@
+---
+
+- name: Generates corosync key
+  ansible.builtin.command: corosync-keygen
+  args:
+    creates: /etc/corosync/authkey
+  when:
+    - inventory_hostname == pacemaker_corosync_bootstrap_node
+  notify:
+    - Restart corosync
+    - Restart pacemaker
+
+- name: Distribute generated corosync authkey
+  when:
+    - inventory_hostname != pacemaker_corosync_bootstrap_node
+  block:
+    - name: Fetch authkey for other nodes
+      ansible.builtin.slurp:
+        src: /etc/corosync/authkey
+      delegate_to: "{{ pacemaker_corosync_bootstrap_node }}"
+      check_mode: false
+      register: _corosync_authkey
+
+    - name: Copy authkey to other nodes
+      ansible.builtin.copy:
+        content: "{{ _corosync_authkey['content'] | b64decode }}"
+        dest: /etc/corosync/authkey
+        mode: "0400"
+      notify:
+        - Restart corosync
+        - Restart pacemaker
+
+- name: Chowns authkeys
+  ansible.builtin.file:
+    path: /etc/corosync/authkey
+    mode: "0400"
+    owner: root
+  notify: Restart corosync
+
+- name: Creates corosync config
+  ansible.builtin.template:
+    src: corosync.conf.j2
+    dest: /etc/corosync/corosync.conf
+    mode: "0400"
+    owner: root
+  notify:
+    - Restart corosync
+    - Restart pacemaker
+
+- name: Creates log directory
+  ansible.builtin.file:
+    path: /var/log/corosync
+    state: directory
+    mode: "0775"
+  when:
+    - pacemaker_corosync_use_logfile | bool
+
+- name: Adds logrotate config for corosync
+  ansible.builtin.template:
+    src: corosync_logrotate.conf.j2
+    dest: /etc/logrotate.d/corosync
+    mode: "0644"
+    owner: root
+  when:
+    - pacemaker_corosync_use_logfile | bool
+
+- name: Creates services directory
+  ansible.builtin.file:
+    path: /etc/corosync/service.d/
+    state: directory
+    mode: "0755"
+
+- name: Adds pacemaker service
+  ansible.builtin.copy:
+    src: pcmk
+    dest: /etc/corosync/service.d/pcmk
+    owner: root
+    mode: "0400"
+  notify:
+    - Restart corosync
+    - Restart pacemaker
+
+- name: Adds ferm filtering
+  ansible.builtin.template:
+    src: "ferm.j2"
+    dest: /etc/ferm/filter-input.d/60_corosync.conf
+    mode: "0640"
+  when: ferm_enabled | default(false)
+  tags: ferm
+  notify: Restart ferm

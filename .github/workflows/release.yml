@@ -1,0 +1,36 @@
+---
+name: Publish to Ansible Galaxy
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Publish Role
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: "tests/requirements.txt"
+
+      - name: Install ansible-core
+        run: pip install ansible-core
+
+      - name: Import role to Ansible Galaxy
+        env:
+          ANSIBLE_GALAXY_TOKEN: ${{ secrets.GALAXY_API_KEY }}
+        run: |
+          ansible-galaxy role import \
+            --token "$ANSIBLE_GALAXY_TOKEN" \
+            --role-name pacemaker_corosync \
+            ${{ github.repository_owner }} \
+            "${{ github.event.repository.name }}"

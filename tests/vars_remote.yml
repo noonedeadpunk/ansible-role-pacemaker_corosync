@@ -1,0 +1,9 @@
+---
+pacemaker_corosync_group: corosync
+pacemaker_remote_group: pacemaker_remote
+pacemaker_corosync_ring_interface: eth1
+pacemaker_remote_ring_interface: eth2
+
+pacemaker_cluster_properties:
+  stonith-enabled: false
+  cluster-recheck-interval: 10s
